@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JULG Panel Administrador</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(214.3 31.8% 91.4%)", input: "hsl(214.3 31.8% 91.4%)", ring: "hsl(215 20.2% 65.1%)", background: "hsl(0 0% 100%)", foreground: "hsl(222.2 47.4% 11.2%)", primary: { DEFAULT: "hsl(222.2 47.4% 11.2%)", foreground: "hsl(210 40% 98%)" }, destructive: { DEFAULT: "hsl(0 100% 50%)", foreground: "hsl(210 40% 98%)" }, muted: { DEFAULT: "hsl(210 40% 96.1%)", foreground: "hsl(215.4 16.3% 46.9%)" }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .hide {
+            display: none !important;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .video-thumbnail {
+            aspect-ratio: 16/9;
+            background-color: #f1f5f9;
+            position: relative;
+            overflow: hidden;
+            border-radius: 0.375rem;
+        }
+
+        .video-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .play-icon-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 50%;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-slate-900 min-h-screen overflow-hidden md:overflow-auto">
+
+    <script src="./api.js"></script>
+    <script>
+        // Simple initialization check
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.API) {
+                console.log('✅ API loaded');
+                window.dispatchEvent(new CustomEvent('api-ready'));
+            } else {
+                console.error('❌ API failed to load');
+            }
+        });
+    </script>
+
+    <div id="login-view"
+        class="flex h-screen w-full items-center justify-center bg-gray-100 z-50 absolute top-0 left-0 px-4">
+        <div class="bg-white p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-sm border border-gray-200">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center p-3 bg-slate-900 rounded-full mb-4">
+                    <i data-lucide="lock" class="text-white h-6 w-6"></i>
+                </div>
+                <h1 class="text-xl sm:text-2xl font-bold">JULG Admin</h1>
+                <p class="text-xs sm:text-sm text-gray-500">Ingresa para administrar la tienda</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs sm:text-sm font-medium mb-1">Email</label>
+                    <input type="email" id="email" value="admin@julg.com"
+                        class="w-full p-2 border rounded-md focus:ring-2 focus:ring-slate-400 outline-none text-sm">
+                </div>
+                <div class="relative">
+                    <label class="block text-xs sm:text-sm font-medium mb-1">Contraseña</label>
+                    <input type="password" id="password" value="admin"
+                        class="w-full p-2 border rounded-md focus:ring-2 focus:ring-slate-400 outline-none pr-10 text-sm">
+                    <button type="button" onclick="togglePassword()" class="absolute right-3 top-8 text-gray-400"><i
+                            data-lucide="eye" class="h-4 w-4"></i></button>
+                </div>
+                <button type="submit"
+                    class="w-full bg-slate-900 text-white py-2 rounded-md hover:bg-slate-800 transition text-sm font-medium">Iniciar
+                    Sesión</button>
+                <p class="text-[10px] sm:text-xs text-center text-gray-400 mt-2">Usuario: admin@julg.com / Pass: admin
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div id="app-layout" class="flex h-screen hide flex-col md:flex-row">
+        <aside class="w-full md:w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex h-auto md:h-screen">
+            <div class="p-4 sm:p-6 border-b border-gray-100">
+                <h2 class="font-bold text-lg sm:text-xl text-slate-800">JULG Panel</h2>
+                <span class="text-[10px] sm:text-xs text-gray-400">Administrador v1.0</span>
+            </div>
+            <nav class="flex-1 p-4 space-y-1 overflow-y-auto">
+                <button onclick="router('dashboard')"
+                    class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 transition text-sm"
+                    data-target="dashboard"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> <span
+                        class="hidden sm:inline">Dashboard</span></button>
+                <button onclick="router('courses')"
+                    class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 transition text-sm"
+                    data-target="courses"><i data-lucide="shopping-bag" class="w-5 h-5"></i> <span
+                        class="hidden sm:inline">Cursos</span></button>
+                <button onclick="router('coupons')"
+                    class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 transition text-sm"
+                    data-target="coupons"><i data-lucide="ticket" class="w-5 h-5"></i> <span
+                        class="hidden sm:inline">Cupones</span></button>
+                <button onclick="router('resources')"
+                    class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 transition text-sm"
+                    data-target="resources"><i data-lucide="file-box" class="w-5 h-5"></i> <span
+                        class="hidden sm:inline">Recursos</span></button>
+                <button onclick="router('members')"
+                    class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 transition text-sm"
+                    data-target="members"><i data-lucide="users" class="w-5 h-5"></i> <span
+                        class="hidden sm:inline">Miembros</span></button>
+                <button onclick="router('settings')"
+                    class="nav-btn w-full flex items-center gap-3 px-3 py-2 rounded-md text-gray-600 hover:bg-gray-100 transition text-sm"
+                    data-target="settings"><i data-lucide="settings" class="w-5 h-5"></i> <span
+                        class="hidden sm:inline">Configuración</span></button>
+            </nav>
+            <div class="p-4 border-t border-gray-100">
+                <button onclick="logout()"
+                    class="w-full flex items-center gap-2 text-red-600 hover:bg-red-50 p-2 rounded-md transition text-sm"><i
+                        data-lucide="log-out" class="w-4 h-4"></i> <span class="hidden sm:inline">Cerrar
+                        Sesión</span></button>
+            </div>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto bg-gray-50 p-4 sm:p-8 w-full" id="main-content">
+            <div id="view-dashboard" class="view-section fade-in">
+                <h1 class="text-3xl font-bold mb-2">Dashboard</h1>
+                <p class="text-gray-500 mb-8">Resumen general de tu tienda.</p>
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <div class="flex justify-between items-center mb-2"><span
+                                class="text-sm font-medium text-gray-500">Ingresos Totales</span><i
+                                data-lucide="dollar-sign" class="w-4 h-4 text-gray-400"></i></div>
+                        <div id="kpi-revenue" class="text-2xl font-bold">$0.00</div>
+                        <p class="text-xs text-green-600 mt-1 flex items-center"><i data-lucide="arrow-up-right"
+                                class="w-3 h-3 mr-1"></i> Calculado de Miembros</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <div class="flex justify-between items-center mb-2"><span
+                                class="text-sm font-medium text-gray-500">Estudiantes</span><i data-lucide="users"
+                                class="w-4 h-4 text-gray-400"></i></div>
+                        <div id="kpi-students" class="text-2xl font-bold">0</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <div class="flex justify-between items-center mb-2"><span
+                                class="text-sm font-medium text-gray-500">Ventas Mes</span><i data-lucide="credit-card"
+                                class="w-4 h-4 text-gray-400"></i></div>
+                        <div class="text-2xl font-bold">+5</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <div class="flex justify-between items-center mb-2"><span
+                                class="text-sm font-medium text-gray-500">Cursos Activos</span><i data-lucide="activity"
+                                class="w-4 h-4 text-gray-400"></i></div>
+                        <div id="kpi-active-courses" class="text-2xl font-bold">0</div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-semibold mb-4">Ingresos Mensuales</h3><canvas id="revenueChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-semibold mb-4">Ventas Recientes</h3>
+                        <div id="recent-sales-list" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-courses" class="view-section hide fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h1 class="text-3xl font-bold">Mis Cursos</h1>
+                        <p class="text-gray-500">Gestiona tu catálogo educativo.</p>
+                    </div>
+                    <button onclick="resetAndCreateCourse()"
+                        class="bg-slate-900 text-white px-4 py-2 rounded-md flex items-center hover:bg-slate-800"><i
+                            data-lucide="plus-circle" class="w-4 h-4 mr-2"></i> Crear Curso</button>
+                </div>
+                <div id="courses-list-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <div id="view-create-course" class="view-section hide fade-in pb-20">
+                <div class="flex justify-between items-center mb-6">
+                    <div class="flex items-center gap-4">
+                        <button onclick="router('courses')" class="p-2 border rounded-md hover:bg-gray-100"><i
+                                data-lucide="arrow-left" class="w-4 h-4"></i></button>
+                        <div>
+                            <h1 class="text-3xl font-bold" id="form-page-title">Crear Nuevo Curso</h1>
+                            <p class="text-gray-500">Configura módulos, precios y categorías.</p>
+                        </div>
+                    </div>
+                    <button onclick="saveCourse()"
+                        class="bg-slate-900 text-white px-4 py-2 rounded-md flex items-center hover:bg-slate-800">
+                        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                        <span id="form-save-btn-text">Guardar Curso</span>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-6">
+                        <div class="bg-white p-6 rounded-xl border shadow-sm">
+                            <h3 class="font-semibold mb-4">Información General</h3>
+                            <div class="space-y-4">
+                                <div><label class="block text-sm font-medium mb-1">Título del Curso</label><input
+                                        type="text" id="course-title" class="w-full p-2 border rounded-md"
+                                        placeholder="Ej: Master en React"></div>
+                                <div><label class="block text-sm font-medium mb-1">Descripción</label><textarea
+                                        id="course-desc" class="w-full p-2 border rounded-md h-32"
+                                        placeholder="¿De qué trata?"></textarea></div>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border shadow-sm">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-semibold">Plan de Estudios</h3><button onclick="addModule()"
+                                    class="text-sm bg-gray-100 px-3 py-1 rounded hover:bg-gray-200 border flex items-center"><i
+                                        data-lucide="plus" class="w-3 h-3 mr-1"></i> Módulo</button>
+                            </div>
+                            <div id="modules-container" class="space-y-4"></div>
+                        </div>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="bg-white p-6 rounded-xl border shadow-sm">
+                            <div class="flex justify-between items-center mb-4">
+                                <h3 class="font-semibold flex items-center"><i data-lucide="tag"
+                                        class="w-4 h-4 mr-2"></i> Clasificación</h3><button
+                                    onclick="toggleCategoryModal()"
+                                    class="text-xs text-blue-600 flex items-center hover:underline"><i
+                                        data-lucide="settings" class="w-3 h-3 mr-1"></i> Gestionar</button>
+                            </div>
+                            <select id="course-category" class="w-full p-2 border rounded-md bg-white"></select>
+                            <div id="category-manager" class="hidden mt-4 p-3 bg-gray-50 border rounded-md">
+                                <div class="flex gap-2 mb-2"><input type="text" id="new-cat-input"
+                                        placeholder="Nueva..." class="flex-1 p-1 text-sm border rounded"><button
+                                        onclick="addCategory()" class="bg-blue-600 text-white p-1 rounded"><i
+                                            data-lucide="plus" class="w-4 h-4"></i></button></div>
+                                <ul id="category-list-ui" class="space-y-1 text-sm max-h-32 overflow-y-auto"></ul>
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border shadow-sm">
+                            <h3 class="font-semibold mb-4">Multimedia</h3>
+                            <div
+                                class="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition">
+                                <i data-lucide="image" class="w-8 h-8 text-gray-400 mx-auto mb-2"></i><span
+                                    class="text-sm text-gray-500">Subir Portada</span>
+                            </div>
+                            <div class="mt-4"><label class="block text-sm font-medium mb-1">Video Promo
+                                    (URL)</label><input type="text" id="course-video-promo"
+                                    class="w-full p-2 border rounded-md text-sm" placeholder="https://youtube.com/...">
+                            </div>
+                        </div>
+                        <div class="bg-white p-6 rounded-xl border shadow-sm">
+                            <h3 class="font-semibold mb-4">Venta</h3>
+                            <div class="space-y-4">
+                                <div><label class="block text-sm font-medium mb-1">Precio Real ($)</label><input
+                                        type="number" id="price-real" class="w-full p-2 border rounded-md"></div>
+                                <div class="bg-green-50 p-3 rounded border border-green-100">
+                                    <div class="flex justify-between mb-1"><label
+                                            class="block text-sm font-bold text-green-700">Precio Oferta
+                                            ($)</label><span
+                                            class="text-[10px] bg-green-200 text-green-800 px-2 rounded-full font-bold">OFERTA</span>
+                                    </div>
+                                    <input type="number" id="price-offer"
+                                        class="w-full p-2 border border-green-200 rounded-md bg-white">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-coupons" class="view-section hide fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold">Cupones</h1><button onclick="openCouponModal()"
+                        class="bg-slate-900 text-white px-4 py-2 rounded-md flex items-center hover:bg-slate-800"><i
+                            data-lucide="plus" class="w-4 h-4 mr-2"></i> Crear Cupón</button>
+                </div>
+                <dialog id="coupon-modal" class="p-0 rounded-lg shadow-xl border w-full max-w-md backdrop:bg-black/50">
+                    <div class="p-6">
+                        <h3 class="text-lg font-bold mb-4">Nuevo Cupón</h3>
+                        <div class="space-y-4">
+                            <div><label class="block text-sm mb-1">Código</label>
+                                <div class="flex gap-2"><input type="text" id="coupon-code"
+                                        class="w-full border p-2 rounded uppercase font-mono"><button
+                                        onclick="generateCode()" class="border p-2 rounded hover:bg-gray-50"><i
+                                            data-lucide="wand-2" class="w-4 h-4 text-purple-600"></i></button></div>
+                            </div>
+                            <div><label class="block text-sm mb-1">Descuento (%)</label><input type="number"
+                                    id="coupon-discount" class="w-full border p-2 rounded"></div>
+                            <div class="flex justify-end gap-2 mt-6"><button
+                                    onclick="document.getElementById('coupon-modal').close()"
+                                    class="px-4 py-2 border rounded">Cancelar</button><button onclick="saveCoupon()"
+                                    class="px-4 py-2 bg-slate-900 text-white rounded">Guardar</button></div>
+                        </div>
+                    </div>
+                </dialog>
+                <div class="bg-white rounded-lg border shadow-sm overflow-hidden">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="p-4">Código</th>
+                                <th class="p-4">Descuento</th>
+                                <th class="p-4">Estado</th>
+                                <th class="p-4 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coupons-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-resources" class="view-section hide fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold">Recursos Gratuitos</h1><button onclick="openResourceModal()"
+                        class="bg-slate-900 text-white px-4 py-2 rounded-md flex items-center hover:bg-slate-800"><i
+                            data-lucide="upload-cloud" class="w-4 h-4 mr-2"></i> Subir Recurso</button>
+                </div>
+                <div class="bg-white rounded-lg border shadow-sm overflow-hidden">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="p-4 w-16">Tipo</th>
+                                <th class="p-4">Nombre</th>
+                                <th class="p-4 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resources-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-members" class="view-section hide fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold">Miembros</h1>
+                    <div class="relative"><i data-lucide="search"
+                            class="absolute left-3 top-2.5 h-4 w-4 text-gray-400"></i><input type="text"
+                            placeholder="Buscar..." class="pl-9 p-2 border rounded-md w-64 text-sm"
+                            onkeyup="filterMembers(this.value)"></div>
+                </div>
+                <div class="bg-white rounded-lg border shadow-sm overflow-hidden">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-gray-50 border-b">
+                            <tr>
+                                <th class="p-4">Usuario</th>
+                                <th class="p-4">Estado</th>
+                                <th class="p-4">Cursos Comprados</th>
+                                <th class="p-4">Total Gastado</th>
+                                <th class="p-4 text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="members-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-settings" class="view-section hide fade-in">
+                <div class="flex justify-between items-center mb-6">
+                    <h1 class="text-3xl font-bold">Configuración</h1>
+                    <button onclick="saveSettings()"
+                        class="bg-slate-900 text-white px-4 py-2 rounded-md flex items-center hover:bg-slate-800"><i
+                            data-lucide="save" class="w-4 h-4 mr-2"></i> Guardar Cambios</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl border shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 flex items-center"><i data-lucide="crown"
+                                class="w-5 h-5 mr-2 text-yellow-500"></i> Membresía Anual</h3>
+                        <p class="text-sm text-gray-500 mb-4">Define el precio de la membresía "Todo Incluido" que da
+                            acceso a toda la tienda por 1 año.</p>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Precio Real ($)</label>
+                                <input type="number" id="setting-membership-price" class="w-full p-2 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">Precio Oferta ($)</label>
+                                <input type="number" id="setting-membership-price-offer"
+                                    class="w-full p-2 border rounded-md" placeholder="Opcional">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Recursos Actualizado -->
+            <dialog id="resource-modal" class="p-0 rounded-lg shadow-xl border w-full max-w-md backdrop:bg-black/50">
+                <div class="p-6">
+                    <h3 class="text-lg font-bold mb-4">Subir Nuevo Recurso</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm mb-1">Nombre del Archivo</label>
+                            <input type="text" id="resource-name" class="w-full border p-2 rounded"
+                                placeholder="Ej: Guía Fiscal 2024.pdf">
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">Descripción</label>
+                            <textarea id="resource-desc" class="w-full border p-2 rounded h-24"
+                                placeholder="Describe el contenido..."></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm mb-1">Archivo</label>
+                            <input type="file" id="resource-file-input"
+                                class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100">
+                        </div>
+                        <div class="flex justify-end gap-2 mt-6">
+                            <button onclick="document.getElementById('resource-modal').close()"
+                                class="px-4 py-2 border rounded">Cancelar</button>
+                            <button onclick="uploadResource()"
+                                class="px-4 py-2 bg-slate-900 text-white rounded flex items-center gap-2"> <i
+                                    data-lucide="upload" class="w-4 h-4"></i> Subir</button>
+                        </div>
+                    </div>
+                </div>
+            </dialog>
+        </main>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
+
+    <script>
+        // ESTADO
+        const state = {
+            currentUser: null,
+            editingCourseId: null, // NUEVO: Para saber si estamos editando
+            categories: [],
+            courses: [],
+            coupons: [],
+            resources: [],
+            members: [],
+            tempModules: []
+        };
+
+        // ROUTER
+        function router(viewName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hide'));
+            const target = document.getElementById(`view-${viewName}`);
+            if (target) target.classList.remove('hide');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                if (btn.dataset.target === viewName) {
+                    btn.classList.add('bg-slate-900', 'text-white'); btn.classList.remove('text-gray-600', 'hover:bg-gray-100');
+                } else {
+                    btn.classList.remove('bg-slate-900', 'text-white'); btn.classList.add('text-gray-600', 'hover:bg-gray-100');
+                }
+            });
+
+            if (viewName === 'members') renderMembers();
+            if (viewName === 'settings') renderSettings();
+            if (viewName === 'coupons') renderCoupons();
+            if (viewName === 'resources') renderResources();
+            if (viewName === 'courses') renderCoursesList();
+            if (viewName === 'dashboard') { updateDashboard(); initChart(); }
+
+            // Si vamos a crear curso y NO estamos editando, limpiar
+            if (viewName === 'create-course' && !state.editingCourseId) {
+                resetForm();
+            }
+            lucide.createIcons();
+        }
+
+        // --- CONFIGURACIÓN ---
+        async function renderSettings() {
+            try {
+                // Ensure API is ready before calling
+                if (!window.API || !window.API.apiGetSettings) {
+                    console.warn('API not ready, retrying renderSettings in 500ms');
+                    setTimeout(renderSettings, 500);
+                    return;
+                }
+                const settings = await window.API.apiGetSettings();
+                if (settings) {
+                    document.getElementById('setting-membership-price').value = settings.membership_price || 999;
+                    document.getElementById('setting-membership-price-offer').value = settings.membership_price_offer || '';
+                }
+            } catch (err) { console.error('Error fetching settings:', err); }
+        }
+
+        async function saveSettings() {
+            const price = document.getElementById('setting-membership-price').value;
+            const offer = document.getElementById('setting-membership-price-offer').value;
+
+            if (!window.API || !window.API.apiSaveSettings) {
+                showToast('Error: API no cargada', 'error');
+                return;
+            }
+
+            try {
+                const result = await window.API.apiSaveSettings({ membership_price: price, membership_price_offer: offer });
+                console.log('Settings saved result:', result);
+                showToast('Configuración guardada correctamente', 'success');
+            } catch (e) {
+                console.error('Save settings error:', e);
+                showToast('Error guardando configuración: ' + e.message, 'error');
+            }
+        }
+
+
+        // --- RECURSOS ---
+        function openResourceModal() {
+            document.getElementById('resource-name').value = '';
+            document.getElementById('resource-desc').value = '';
+            document.getElementById('resource-file-input').value = '';
+            document.getElementById('resource-modal').showModal();
+        }
+
+        async function uploadResource() {
+            const fileInput = document.getElementById('resource-file-input');
+            const file = fileInput.files[0];
+            const desc = document.getElementById('resource-desc').value;
+            const name = document.getElementById('resource-name').value || (file ? file.name : 'Recurso');
+
+            if (!file) return showToast('Selecciona un archivo', 'error');
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const dataUrl = e.target.result;
+                try {
+                    await window.API.apiCreateResource({
+                        name: name,
+                        description: desc,
+                        type: file.type,
+                        dataUrl: dataUrl
+                    });
+                    showToast('Recurso subido correctamente', 'success');
+                    document.getElementById('resource-modal').close();
+                    state.resources = await window.API.apiGetResources();
+                    renderResources();
+                } catch (err) {
+                    showToast('Error al subir recurso', 'error');
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Remove old handleFileUpload
+        // function handleFileUpload(input) ...
+
+
+        // CARGAR TODOS LOS DATOS DEL ADMIN
+        window.loadAdminData = async function () {
+            try {
+                // Cargar datos en paralelo
+                const [categories, courses, coupons, orders, members] = await Promise.all([
+                    window.API.apiGetCategories(),
+                    window.API.apiGetAllCourses(),
+                    window.API.apiGetCoupons(),
+                    window.API.apiGetOrders(),
+                    window.API.apiGetAllUsers()
+                ]);
+
+                state.categories = categories || [];
+                state.courses = courses || [];
+                state.coupons = coupons || [];
+                state.members = members || [];
+
+                console.log('✅ Admin data loaded:', {
+                    categories: state.categories.length,
+                    courses: state.courses.length,
+                    coupons: state.coupons.length,
+                    members: state.members.length
+                });
+            } catch (err) {
+                console.error('❌ Error loading admin data:', err);
+                showToast('Error cargando datos', 'error');
+            }
+        };
+
+        // --- LÓGICA DE EDICIÓN Y CREACIÓN ---
+        function resetAndCreateCourse() {
+            state.editingCourseId = null; // Limpiar modo edición
+            resetForm();
+            router('create-course');
+        }
+
+        function resetForm() {
+            document.getElementById('form-page-title').innerText = "Crear Nuevo Curso";
+            document.getElementById('form-save-btn-text').innerText = "Guardar Curso";
+
+            document.getElementById('course-title').value = "";
+            document.getElementById('course-desc').value = "";
+            document.getElementById('price-real').value = "";
+            document.getElementById('price-offer').value = "";
+            document.getElementById('course-video-promo').value = "";
+
+            state.tempModules = [{ id: Date.now(), title: "Módulo 1", lessons: [{ id: Date.now() + 1, title: "", url: "" }] }];
+            renderModules();
+            renderCategorySelect();
+        }
+
+        function editCourse(id) {
+            const course = state.courses.find(c => c.id === id);
+            if (!course) return;
+
+            state.editingCourseId = id; // Activar modo edición
+            state.tempModules = JSON.parse(JSON.stringify(course.modules)); // Clon profundo
+
+            router('create-course');
+
+            // Llenar datos
+            document.getElementById('form-page-title').innerText = "Editar Curso";
+            document.getElementById('form-save-btn-text').innerText = "Actualizar Curso";
+
+            document.getElementById('course-title').value = course.title;
+            document.getElementById('course-desc').value = course.desc || "";
+            document.getElementById('price-real').value = course.price;
+            document.getElementById('price-offer').value = course.priceOffer || "";
+            document.getElementById('course-video-promo').value = course.videoPromo || "";
+
+            renderCategorySelect();
+            document.getElementById('course-category').value = course.category;
+            renderModules();
+        }
+
+        async function saveCourse() {
+            const title = document.getElementById('course-title').value;
+            const price = document.getElementById('price-real').value;
+            if (!title || !price) return showToast("Falta título o precio", "error");
+
+            const courseData = {
+                title,
+                price,
+                desc: document.getElementById('course-desc').value,
+                priceOffer: document.getElementById('price-offer').value,
+                videoPromo: document.getElementById('course-video-promo').value,
+                modulesCount: state.tempModules.length,
+                category: document.getElementById('course-category').value,
+                modules: state.tempModules,
+            };
+
+            try {
+                if (state.editingCourseId) {
+                    await window.API.apiUpdateCourse(state.editingCourseId, courseData);
+                    showToast("Curso actualizado correctamente", "success");
+                } else {
+                    await window.API.apiCreateCourse(courseData);
+                    showToast("Curso creado correctamente", "success");
+                }
+                state.courses = await window.API.apiGetAllCourses();
+                state.editingCourseId = null; // Salir modo edición
+                router('courses');
+            } catch (err) {
+                showToast(err.message || 'Error al guardar curso', 'error');
+            }
+        }
+
+        // TOGGLE STATUS
+        async function toggleCourseStatus(id) {
+            try {
+                const course = (await window.API.apiGetAllCourses()).find(c => c.id === id);
+                if (!course) return;
+                const newStatus = (course.status === 'active') ? 'inactive' : 'active';
+                await window.API.apiUpdateCourse(id, { status: newStatus });
+                state.courses = await window.API.apiGetAllCourses();
+                renderCoursesList();
+                showToast(`Curso ${newStatus === 'active' ? 'Activado' : 'Desactivado'}`, 'success');
+            } catch (err) { showToast('No se pudo cambiar estado', 'error'); }
+        }
+
+        // AUTH - Esperar a que API esté listo
+        function initLoginHandler() {
+            // Deprecated - moved to separate script tag at end of body
+        }
+
+        function logout() {
+            state.currentUser = null;
+            if (window.API && window.API.apiLogout) window.API.apiLogout();
+            document.getElementById('app-layout').classList.add('hide');
+            document.getElementById('login-view').classList.remove('hide');
+            showToast("Sesión cerrada");
+        }
+        function togglePassword() {
+            const input = document.getElementById('password');
+            input.type = input.type === "password" ? "text" : "password";
+        }
+
+        // DASHBOARD
+        function updateDashboard() {
+            const totalRevenue = state.members.reduce((acc, member) => acc + member.spent, 0);
+            const totalStudents = state.members.length;
+            const activeCoursesCount = state.courses.filter(c => c.status === 'active').length;
+            document.getElementById('kpi-revenue').textContent = '$' + totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('kpi-students').textContent = '+' + totalStudents;
+            document.getElementById('kpi-active-courses').textContent = activeCoursesCount;
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            if (window.myChart) window.myChart.destroy();
+
+            // Calcular ingresos por órdenes reales
+            const orders = _get('orders', []);
+            const monthlyData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+            orders.forEach(order => {
+                const amount = order.totalAmount || order.total || 0;
+                if (amount && order.createdAt) {
+                    const date = new Date(order.createdAt);
+                    const month = date.getMonth();
+                    monthlyData[month] = (monthlyData[month] || 0) + parseFloat(amount);
+                }
+            });
+
+            const monthLabels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+            window.myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: [{
+                        label: 'Ingresos ($)',
+                        data: monthlyData,
+                        backgroundColor: '#0f172a',
+                        borderColor: '#1e293b',
+                        borderRadius: 4,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: (value) => '$' + value.toFixed(0) }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: true }
+                    }
+                }
+            });
+
+            // Actualizar ventas recientes
+            const recentOrders = orders.slice(-5).reverse();
+            document.getElementById('recent-sales-list').innerHTML = recentOrders.length > 0 ? recentOrders.map(order => {
+                const member = state.members.find(m => m.id === order.userId);
+                return `
+                    <div class="flex items-center justify-between p-2 border rounded hover:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <div class="h-8 w-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-xs">${(member?.name || 'Anon').substring(0, 2).toUpperCase()}</div>
+                            <div>
+                                <p class="text-sm font-medium">${member?.name || 'Comprador Anónimo'}</p>
+                                <p class="text-xs text-gray-500">#${order.id}</p>
+                            </div>
+                        </div>
+                        <span class="font-bold text-sm text-green-600">+$${parseFloat(order.total || order.totalAmount || 0).toFixed(2)}</span>
+                    </div>
+                `;
+            }).join('') : '<p class="text-gray-400 text-center py-4 text-sm">Sin ventas aún</p>';
+        }
+
+        function _get(key, fallback) {
+            try {
+                const v = localStorage.getItem(key);
+                return v ? JSON.parse(v) : fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        // CURSOS Y MÓDULOS (Helpers)
+        function getVideoThumbnail(url) {
+            if (!url) return 'https://placehold.co/600x400?text=Sin+Video';
+            const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/user\/\S+|\/ytscreeningroom\?v=))([\w\-]{10,12})\b/);
+            if (ytMatch && ytMatch[1]) return `https://img.youtube.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+            return 'https://placehold.co/600x400?text=Video+Link';
+        }
+
+        function renderModules() {
+            document.getElementById('modules-container').innerHTML = state.tempModules.map(mod => `
+                <div class="border rounded-lg p-4 bg-gray-50">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex gap-2 items-center flex-1"><i data-lucide="grip-vertical" class="w-4 h-4 text-gray-400 cursor-move"></i><input type="text" value="${mod.title}" onchange="updateModTitle(${mod.id}, this.value)" class="bg-transparent font-medium border-none focus:ring-0 p-0 w-full"></div>
+                        <button onclick="deleteModule(${mod.id})" class="text-red-500 hover:bg-red-100 p-1 rounded"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                    <div class="pl-6 space-y-2 border-l-2 border-gray-200 ml-2">
+                        ${mod.lessons.map(lesson => `
+                            <div class="flex gap-3 items-start bg-white p-2 rounded border">
+                                <div class="w-24 h-14 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative video-thumbnail">
+                                    <img src="${getVideoThumbnail(lesson.url)}" alt="Thumbnail">
+                                    ${lesson.url ? '<div class="play-icon-overlay"><i data-lucide="play" class="w-4 h-4 text-white"></i></div>' : ''}
+                                </div>
+                                <div class="flex-1 space-y-1">
+                                    <input placeholder="Título de la clase" value="${lesson.title}" onchange="updateLesson(${mod.id}, ${lesson.id}, 'title', this.value)" class="w-full p-1 border rounded text-sm">
+                                    <input placeholder="URL del video (YouTube)" value="${lesson.url}" onchange="updateLesson(${mod.id}, ${lesson.id}, 'url', this.value)" class="w-full p-1 border rounded text-xs font-mono text-gray-500">
+                                </div>
+                                <button onclick="deleteLesson(${mod.id}, ${lesson.id})" class="text-red-400 hover:text-red-600"><i data-lucide="x" class="w-4 h-4"></i></button>
+                            </div>
+                        `).join('')}
+                        <button onclick="addLesson(${mod.id})" class="text-xs text-blue-600 hover:underline flex items-center mt-2"><i data-lucide="plus" class="w-3 h-3 mr-1"></i> Agregar Video</button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
+        }
+        function addModule() { state.tempModules.push({ id: Date.now(), title: "Nuevo Módulo", lessons: [] }); renderModules(); }
+        function deleteModule(id) { state.tempModules = state.tempModules.filter(m => m.id !== id); renderModules(); }
+        function updateModTitle(id, val) { state.tempModules.find(m => m.id === id).title = val; }
+        function addLesson(modId) { state.tempModules.find(m => m.id === modId).lessons.push({ id: Date.now(), title: "", url: "" }); renderModules(); }
+        function deleteLesson(modId, lessonId) { const mod = state.tempModules.find(m => m.id === modId); mod.lessons = mod.lessons.filter(l => l.id !== lessonId); renderModules(); }
+        function updateLesson(modId, lessonId, field, value) { const mod = state.tempModules.find(m => m.id === modId); mod.lessons = mod.lessons.map(l => l.id === lessonId ? { ...l, [field]: value } : l); if (field === 'url') renderModules(); }
+
+        // CATEGORÍAS
+        function renderCategorySelect() {
+            document.getElementById('course-category').innerHTML = `<option value="">Seleccionar...</option>` + state.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+            document.getElementById('category-list-ui').innerHTML = state.categories.map(c => `<li class="flex justify-between items-center bg-white p-1 rounded border">${c} <button onclick="removeCategory('${c}')" class="text-red-500 hover:text-red-700"><i data-lucide="x" class="w-3 h-3"></i></button></li>`).join('');
+            lucide.createIcons();
+        }
+        function toggleCategoryModal() { document.getElementById('category-manager').classList.toggle('hidden'); }
+        async function addCategory() { const val = document.getElementById('new-cat-input').value.trim(); if (!val) return; try { await window.API.apiAddCategory(val); document.getElementById('new-cat-input').value = ''; state.categories = await window.API.apiGetCategories(); renderCategorySelect(); showToast('Categoría agregada', 'success'); } catch (err) { showToast('No se pudo agregar categoría', 'error'); } }
+        async function removeCategory(val) { try { await window.API.apiDeleteCategory(val); state.categories = await window.API.apiGetCategories(); renderCategorySelect(); showToast('Categoría eliminada', 'success'); } catch (err) { showToast('No se pudo eliminar categoría', 'error'); } }
+
+        // RENDER CURSOS LISTA (Con Botón Editar Activo)
+        function renderCoursesList() {
+            document.getElementById('courses-list-container').innerHTML = state.courses.map(c => {
+                const isInactive = c.status === 'inactive';
+                const statusBadge = !isInactive
+                    ? `<span class="text-[10px] bg-green-100 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-bold uppercase">Activo</span>`
+                    : `<span class="text-[10px] bg-gray-100 text-gray-500 border border-gray-200 px-2 py-0.5 rounded-full font-bold uppercase">Inactivo</span>`;
+                const opacityClass = isInactive ? 'opacity-75' : '';
+
+                return `
+                <div class="bg-white p-4 rounded-lg border shadow-sm flex flex-col justify-between h-52 ${opacityClass} transition-all">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-xs bg-slate-100 px-2 py-1 rounded text-slate-600 inline-block">${c.category || 'Sin cat.'}</span>
+                            ${statusBadge}
+                        </div>
+                        <h3 class="font-bold text-lg leading-tight mb-1">${c.title}</h3>
+                        <p class="text-sm text-gray-500">${c.modulesCount} Módulos</p>
+                    </div>
+                    <div>
+                         <div class="font-bold text-lg mb-3">$${c.price}</div>
+                                 <div class="flex gap-2 pt-3 border-t">
+                            <button onclick="editCourse(${c.id})" class="flex-1 flex items-center justify-center gap-1 text-sm bg-gray-50 hover:bg-gray-100 text-slate-700 py-1.5 rounded border transition">
+                                <i data-lucide="pencil" class="w-3 h-3"></i> Editar
+                            </button>
+                            <button onclick="toggleCourseStatus(${c.id})" class="flex-1 flex items-center justify-center gap-1 text-sm ${!isInactive ? 'text-red-600 hover:bg-red-50 border-red-100' : 'text-green-600 hover:bg-green-50 border-green-100'} py-1.5 rounded border transition">
+                                <i data-lucide="power" class="w-3 h-3"></i> ${!isInactive ? 'Desactivar' : 'Activar'}
+                            </button>
+                            <button onclick="deleteCourse(${c.id})" class="flex-1 flex items-center justify-center gap-1 text-sm text-red-600 hover:bg-red-50 border-red-100 py-1.5 rounded border transition">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i> Eliminar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `}).join('');
+            lucide.createIcons();
+        }
+
+        // CUPONES, RECURSOS, MIEMBROS, TOASTS (Sin cambios)
+        function openCouponModal() { document.getElementById('coupon-modal').showModal(); }
+        function generateCode() { document.getElementById('coupon-code').value = Math.random().toString(36).substring(2, 10).toUpperCase(); }
+        async function saveCoupon() {
+            const code = document.getElementById('coupon-code').value.trim().toUpperCase();
+            const discount = Number(document.getElementById('coupon-discount').value) || 0;
+            if (!code || discount <= 0) return showToast('Código y descuento requeridos', 'error');
+            if (discount > 100) return showToast('Descuento no puede ser mayor a 100%', 'error');
+            try {
+                await window.API.apiCreateCoupon({
+                    code: code,
+                    discount: discount,
+                    type: 'percentage',
+                    status: 'active',
+                    maxUses: 0,
+                    usedCount: 0,
+                    minPurchase: 0
+                });
+                document.getElementById('coupon-modal').close();
+                document.getElementById('coupon-code').value = '';
+                document.getElementById('coupon-discount').value = '';
+                state.coupons = await window.API.apiGetCoupons();
+                renderCoupons();
+                showToast('✓ Cupón creado: ' + code, 'success');
+            } catch (err) {
+                showToast('Error: ' + (err.message || 'No se pudo crear cupón'), 'error');
+            }
+        }
+        function renderCoupons() {
+            const tbody = document.getElementById('coupons-table-body');
+            if (!state.coupons || state.coupons.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">No hay cupones creados</td></tr>';
+                return;
+            }
+            tbody.innerHTML = (state.coupons || []).map(c => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4 font-mono font-bold text-slate-700">${c.code}</td>
+                    <td class="p-4 font-bold text-green-600">-${c.discount}%</td>
+                    <td class="p-4"><span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full border border-green-200">Activo</span></td>
+                    <td class="p-4 text-right">
+                        <button onclick="deleteCoupon(${c.id})" class="text-red-500 hover:bg-red-50 p-2 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+        async function deleteCoupon(id) {
+            if (!confirm('¿Eliminar cupón?')) return;
+            try {
+                await window.API.apiDeleteCoupon(id);
+                state.coupons = await window.API.apiGetCoupons();
+                renderCoupons();
+                showToast('Cupón eliminado');
+            } catch (err) { showToast('Error al eliminar'); }
+        }
+
+        // RECURSOS
+        function renderResources() {
+            const tbody = document.getElementById('resources-table-body');
+            if (!state.resources || state.resources.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-8 text-center text-gray-500">No hay recursos</td></tr>';
+                return;
+            }
+            tbody.innerHTML = state.resources.map(r => `
+                <tr class="border-b hover:bg-gray-50">
+                     <td class="p-4"><i data-lucide="file-text" class="text-blue-500 w-5 h-5"></i></td>
+                    <td class="p-4 font-medium text-slate-700">${r.name}</td>
+                    <td class="p-4 text-right">
+                        <button onclick="deleteResource(${r.id})" class="text-red-500 hover:bg-red-50 p-2 rounded transition"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+        async function handleFileUpload(input) {
+            if (input.files && input.files[0]) {
+                const file = input.files[0];
+                const reader = new FileReader();
+                reader.onload = async function (e) {
+                    const dataUrl = e.target.result;
+                    try {
+                        await window.API.apiCreateResource({
+                            name: file.name,
+                            type: file.type,
+                            dataUrl: dataUrl
+                        });
+                        state.resources = await window.API.apiGetResources();
+                        renderResources();
+                        showToast('Recurso subido correctamente', 'success');
+                    } catch (err) {
+                        showToast('Error al subir recurso', 'error');
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        async function deleteResource(id) {
+            if (!confirm('¿Eliminar recurso?')) return;
+            try {
+                await window.API.apiDeleteResource(id);
+                state.resources = await window.API.apiGetResources();
+                renderResources();
+                showToast('Recurso eliminado');
+            } catch (err) { showToast('Error al eliminar'); }
+        }
+
+
+        // MIEMBROS
+        function renderMembers() {
+            const tbody = document.getElementById('members-table-body');
+            if (!state.members || state.members.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-gray-500">No hay miembros registrados</td></tr>';
+                return;
+            }
+            tbody.innerHTML = state.members.map(m => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-xs">${(m.firstName || m.email || 'U').substring(0, 2).toUpperCase()}</div>
+                            <div>
+                                <p class="font-medium text-slate-900 text-sm">${m.firstName} ${m.lastName}</p>
+                                <p class="text-xs text-gray-500">${m.email}</p>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="p-4"><span class="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">${m.status || 'Active'}</span></td>
+                    <td class="p-4 text-center font-bold text-slate-700">${m.courses ? m.courses.length : 0}</td>
+                    <td class="p-4 font-mono text-green-600">$${(m.spent || 0).toFixed(2)}</td>
+                    <td class="p-4 text-right">
+                         <button onclick="toggleUserStatus('${m.email}', '${m.status}')" class="text-slate-400 hover:text-slate-600 p-2"><i data-lucide="user-cog" class="w-4 h-4"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+            lucide.createIcons();
+        }
+        async function toggleUserStatus(email, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'blocked' : 'active';
+            if (confirm(`¿Cambiar estado de ${email} a ${newStatus}?`)) {
+                try {
+                    await window.API.apiUpdateUserStatus(email, newStatus);
+                    state.members = await window.API.apiGetAllUsers();
+                    renderMembers();
+                    showToast(`Usuario ${newStatus}`);
+                } catch (e) { showToast('Error actualizando usuario', 'error'); }
+            }
+        }
+        function filterMembers(val) {
+            const rows = document.querySelectorAll('#members-table-body tr');
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                row.style.display = text.includes(val.toLowerCase()) ? '' : 'none';
+            });
+        }
+
+
+        // TOAST SYSTEM
+        function showToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const el = document.createElement('div');
+            const colors = type === 'error' ? 'bg-red-500' : (type === 'success' ? 'bg-green-500' : 'bg-slate-800');
+            el.className = `${colors} text-white px-4 py-3 rounded shadow-lg text-sm flex items-center gap-2 transform transition-all duration-300 translate-y-10 opacity-0`;
+            el.innerHTML = `<span>${msg}</span>`;
+            container.appendChild(el);
+            requestAnimationFrame(() => { el.classList.remove('translate-y-10', 'opacity-0'); });
+            setTimeout(() => {
+                el.classList.add('opacity-0', 'translate-y-10');
+                setTimeout(() => el.remove(), 300);
+            }, 3000);
+        }
+
+        // APP INIT
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            try {
+                const user = await window.API.apiLogin(email, pass);
+                console.log('Login result:', user);
+                if (user && user.role === 'admin') {
+                    state.currentUser = user;
+                    document.getElementById('login-view').classList.add('hide');
+                    document.getElementById('app-layout').classList.remove('hide');
+                    loadAdminData();
+                    router('dashboard');
+                    showToast(`Bienvenido Admin ${user.firstName}`, 'success');
+                } else {
+                    showToast('Acceso denegado: No eres administrador', 'error');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'Error de autenticación', 'error');
+            }
+        });
+
+        // Initialize Icons
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

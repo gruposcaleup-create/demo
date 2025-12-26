@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inicio de Sesión - Gonzalo Juárez López Jr.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Cinzel:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
+                    },
+                    colors: {
+                        background: '#09090b', /* Shadcn Zinc-950 approx */
+                        card: '#121212',       /* Un gris un poco más claro que el fondo puro */
+                        primary: '#D40B75',    /* El rosa magenta exacto del botón */
+                        primaryHover: '#b00961',
+                        border: '#27272a',     /* Zinc-800 */
+                        input: '#1a1a1a',      /* Fondo de los inputs */
+                        muted: '#a1a1aa',      /* Zinc-400 para textos secundarios */
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Estilos base para reset y scrollbar */
+        body {
+            background-color: #000000;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            /* Para evitar scroll en diseño fijo */
+        }
+
+        /* Gradiente específico para el lado derecho */
+        .brand-gradient {
+            background: linear-gradient(135deg, #2e051c 0%, #4a042e 40%, #5e0b3e 100%);
+            position: relative;
+        }
+
+        /* Efecto de viñeta sutil en el lado derecho */
+        .brand-gradient::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0, 0, 0, 0.6) 100%);
+        }
+
+        /* Utilidad para centrar absolutamente */
+        .center-absolute {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Ajuste fino de los inputs para parecerse a la imagen (bordes muy finos) */
+        .custom-input {
+            background-color: #121212;
+            border: 1px solid #333;
+            transition: border-color 0.2s;
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        /* Botón con gradiente sutil si se desea, o plano como la imagen */
+        .btn-primary {
+            background-color: #D40B75;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background-color: #b00961;
+        }
+    </style>
+</head>
+
+<body x-data="loginForm()">
+
+    <div
+        class="w-full max-w-[900px] h-auto sm:h-[550px] bg-[#121212] rounded-lg shadow-2xl overflow-hidden border border-zinc-800 flex flex-col sm:flex-row">
+
+        <div class="w-full sm:w-1/2 p-6 sm:p-12 flex flex-col justify-center relative">
+
+            <div class="w-full max-w-xs mx-auto space-y-6">
+                <div class="text-center space-y-2">
+                    <h1 class="text-xl sm:text-2xl font-medium text-white tracking-tight">Inicia sesión</h1>
+                    <p class="text-[10px] sm:text-[11px] text-zinc-400 font-light">
+                        Accede a tu cuenta para continuar <br> aprendiendo
+                    </p>
+                </div>
+
+                <form class="space-y-4 mt-6" @submit.prevent="handleLogin()">
+
+                    <div class="space-y-1">
+                        <input type="email" placeholder="Correo electrónico" x-model="email"
+                            class="custom-input w-full px-3 py-2.5 rounded text-xs text-white placeholder:text-zinc-600 font-light focus:ring-0">
+                    </div>
+
+                    <div class="space-y-1">
+                        <input type="password" placeholder="Contraseña" x-model="password"
+                            class="custom-input w-full px-3 py-2.5 rounded text-xs text-white placeholder:text-zinc-600 font-light focus:ring-0">
+                    </div>
+
+                    <div class="text-center space-y-1 pt-1">
+                        <a href="#" @click.prevent="showForgotPassword()"
+                            class="block text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors">
+                            ¿Has olvidado tu contraseña?
+                        </a>
+                        <div class="text-[10px] text-zinc-500">
+                            ¿No tienes cuenta? <a href="register.html"
+                                class="text-[#D40B75] hover:underline font-medium">Regístrate</a>
+                        </div>
+                    </div>
+
+                    <button type="submit" :disabled="loading"
+                        class="btn-primary w-full py-2.5 rounded text-xs font-semibold text-white tracking-wide shadow-lg mt-4 disabled:opacity-50"
+                        x-text="loading ? 'Cargando...' : 'Acceder'">
+                        Acceder
+                    </button>
+
+                    <div x-show="error" class="text-red-500 text-xs text-center" x-text="error"></div>
+
+                </form>
+            </div>
+
+            <div class="absolute bottom-4 sm:bottom-6 left-0 w-full text-center">
+                <a href="#" class="text-[10px] text-zinc-600 hover:text-zinc-400 transition-colors">
+                    Términos y condiciones
+                </a>
+            </div>
+        </div>
+
+        <div
+            class="hidden sm:flex w-full sm:w-1/2 brand-gradient flex-col items-center justify-center relative border-l border-zinc-800">
+            <div class="relative z-10 text-center flex flex-col items-center">
+
+                <div class="mb-2">
+                    <img src="images/CUMPUTERJULG.png" alt="Mockup" width="100" height="100"
+                        class="mx-auto object-contain">
+                </div>
+
+                <div class="text-white font-serif tracking-widest leading-none">
+                    <h2 class="text-3xl font-normal" style="font-family: 'Cinzel', serif;">GONZALO</h2>
+                    <h3 class="text-lg font-normal mt-1" style="font-family: 'Cinzel', serif;">JUÁREZ LÓPEZ JR.</h3>
+                </div>
+
+                <div class="mt-2 border-t border-white/30 pt-1 w-3/4 mx-auto">
+                    <p class="text-[7px] text-zinc-300 tracking-[0.2em] uppercase font-sans">
+                        Doctor Corporativo
+                    </p>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal de Recuperación de Contraseña -->
+    <div x-show="showForgotPasswordModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div class="bg-[#121212] border border-zinc-800 rounded-lg p-8 max-w-sm w-full mx-4">
+            <h2 class="text-lg font-medium text-white mb-4">Recuperar contraseña</h2>
+
+            <!-- Step 1: Email -->
+            <div x-show="forgotPasswordStep === 1" class="space-y-4">
+                <p class="text-xs text-zinc-400 mb-4">Ingresa tu email para recibir un código de recuperación</p>
+                <input type="email" placeholder="Correo electrónico" x-model="forgotEmail"
+                    class="custom-input w-full px-3 py-2 rounded text-xs text-white placeholder:text-zinc-600">
+                <button @click="requestPasswordReset()" :disabled="forgotLoading"
+                    class="btn-primary w-full py-2 rounded text-xs font-semibold text-white disabled:opacity-50"
+                    x-text="forgotLoading ? 'Enviando...' : 'Enviar código'">
+                    Enviar código
+                </button>
+                <div x-show="forgotError" class="text-red-500 text-xs" x-text="forgotError"></div>
+                <div x-show="forgotSuccess" class="text-green-500 text-xs" x-text="forgotSuccess"></div>
+            </div>
+
+            <!-- Step 2: Token + New Password -->
+            <div x-show="forgotPasswordStep === 2" class="space-y-4">
+                <p class="text-xs text-zinc-400 mb-4">Ingresa el código enviado y tu nueva contraseña</p>
+                <input type="text" placeholder="Código de recuperación" x-model="forgotToken"
+                    class="custom-input w-full px-3 py-2 rounded text-xs text-white placeholder:text-zinc-600">
+                <input type="password" placeholder="Nueva contraseña" x-model="newPassword"
+                    class="custom-input w-full px-3 py-2 rounded text-xs text-white placeholder:text-zinc-600">
+                <input type="password" placeholder="Confirmar contraseña" x-model="newPasswordConfirm"
+                    class="custom-input w-full px-3 py-2 rounded text-xs text-white placeholder:text-zinc-600">
+                <button @click="resetPassword()" :disabled="forgotLoading"
+                    class="btn-primary w-full py-2 rounded text-xs font-semibold text-white disabled:opacity-50"
+                    x-text="forgotLoading ? 'Procesando...' : 'Cambiar contraseña'">
+                    Cambiar contraseña
+                </button>
+                <div x-show="forgotError" class="text-red-500 text-xs" x-text="forgotError"></div>
+                <div x-show="forgotSuccess" class="text-green-500 text-xs" x-text="forgotSuccess"></div>
+            </div>
+
+            <button @click="showForgotPasswordModal = false"
+                class="w-full mt-4 py-2 text-xs text-zinc-400 hover:text-white transition-colors">
+                Cancelar
+            </button>
+        </div>
+    </div>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="./api.js"></script>
+    <script>
+        // Crear usuario admin por defecto si no existe
+        function ensureAdminExists() {
+            try {
+                const users = JSON.parse(localStorage.getItem('users') || '[]');
+                const adminExists = users.some(u => u.email === 'admin@julg.com');
+
+                if (!adminExists) {
+                    const bcrypt = (str) => btoa(str);
+                    users.push({
+                        email: 'admin@julg.com',
+                        password: bcrypt('admin123'),
+                        firstName: 'Admin',
+                        lastName: 'JULG',
+                        role: 'admin',
+                        status: 'active',
+                        coursesPurchased: [],
+                        createdAt: new Date().toISOString()
+                    });
+                    localStorage.setItem('users', JSON.stringify(users));
+                    console.log('✅ Admin creado: admin@julg.com / admin123');
+                }
+            } catch (err) {
+                console.error('Error creando admin:', err);
+            }
+        }
+
+        // Llamar al cargar
+        // Legacy migration code removed
+
+        window.loginForm = function () {
+            return {
+                email: '',
+                password: '',
+                loading: false,
+                error: '',
+                showForgotPasswordModal: false,
+                forgotEmail: '',
+                forgotPasswordStep: 1, // 1: email, 2: token+newPassword
+                forgotToken: '',
+                newPassword: '',
+                newPasswordConfirm: '',
+                forgotLoading: false,
+                forgotError: '',
+                forgotSuccess: '',
+                async handleLogin() {
+                    this.error = '';
+                    this.loading = true;
+                    try {
+                        const response = await window.API.apiLogin(this.email, this.password);
+
+                        // Obtener parámetro de redirección
+                        const params = new URLSearchParams(window.location.search);
+                        const redirect = params.get('redirect');
+
+                        // Si viene de carrito, regresar a carrito
+                        if (redirect === 'cart') {
+                            window.location.href = 'cart.html';
+                        } else {
+                            // Sino, ir al panel
+                            window.location.href = 'panel.html';
+                        }
+                    } catch (err) {
+                        this.error = err.message || 'Error al iniciar sesión';
+                    }
+                    this.loading = false;
+                },
+                showForgotPassword() {
+                    this.showForgotPasswordModal = true;
+                    this.forgotPasswordStep = 1;
+                    this.forgotError = '';
+                    this.forgotSuccess = '';
+                },
+                async requestPasswordReset() {
+                    this.forgotError = '';
+                    this.forgotSuccess = '';
+                    this.forgotLoading = true;
+                    try {
+                        // Use consistent API name
+                        const response = await window.API.apiRecoverPassword(this.forgotEmail);
+                        this.forgotSuccess = `Código enviado: ${response.code} (Modo Demo)`;
+                        this.forgotPasswordStep = 2;
+                    } catch (err) {
+                        this.forgotError = err.message || 'Error al solicitar reset';
+                    }
+                    this.forgotLoading = false;
+                },
+                async resetPassword() {
+                    this.forgotError = '';
+                    this.forgotSuccess = '';
+                    if (this.newPassword !== this.newPasswordConfirm) {
+                        this.forgotError = 'Las contraseñas no coinciden';
+                        return;
+                    }
+                    if (this.newPassword.length < 6) {
+                        this.forgotError = 'La contraseña debe tener al menos 6 caracteres';
+                        return;
+                    }
+                    this.forgotLoading = true;
+                    try {
+                        // Pass email, code, newPassword
+                        const response = await window.API.apiResetPassword(this.forgotEmail, this.forgotToken, this.newPassword);
+                        this.forgotSuccess = '¡Contraseña recuperada! Intenta iniciar sesión.';
+                        setTimeout(() => {
+                            this.showForgotPasswordModal = false;
+                            this.email = this.forgotEmail;
+                            this.password = '';
+                            // Reset state
+                            this.forgotPasswordStep = 1;
+                            this.forgotEmail = '';
+                            this.forgotToken = '';
+                            this.newPassword = '';
+                            this.newPasswordConfirm = '';
+                        }, 2000);
+                    } catch (err) {
+                        this.forgotError = err.message || 'Error al resetear contraseña';
+                    }
+                    this.forgotLoading = false;
+                }
+            }
+        }
+    </script>
+
+</html>

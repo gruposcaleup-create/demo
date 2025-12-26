@@ -1,0 +1,622 @@
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+const db = require('./database');
+const path = require('path');
+const fs = require('fs');
+require('dotenv').config();
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    maxNetworkRetries: 2,
+    timeout: 10000,
+});
+
+const app = express();
+const PORT = 3000; // Puerto del servidor
+
+app.use(cors());
+
+// Webhook endpoint needs raw body, so we define it BEFORE default parsers
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    let event;
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (err) {
+        console.error(`Webhook Error: ${err.message}`);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const orderId = session.metadata.orderId;
+        console.log(`Pago confirmado para orden ${orderId}`);
+
+        // Update order status in DB
+        if (orderId) {
+            // Assuming orderId is "order_ID" -> extract ID
+            const dbId = orderId.replace('order_', '');
+            db.run(`UPDATE orders SET status = 'paid' WHERE id = ?`, [dbId], (err) => {
+                if (err) console.error("Error updating order status", err);
+            });
+        }
+    }
+
+    res.json({ received: true });
+});
+
+app.use(bodyParser.json({ limit: '50mb' })); // Limit alto para uploads base64 si es necesario
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Servir archivos estáticos del frontend
+app.use(express.static(path.join(__dirname, '.')));
+
+// --- RUTAS DE API ---
+
+// 1. Auth: Registro
+app.post('/api/auth/register', (req, res) => {
+    const { email, password, firstName, lastName } = req.body;
+    if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
+
+    db.run(`INSERT INTO users (email, password, firstName, lastName) VALUES (?, ?, ?, ?)`,
+        [email, password, firstName || '', lastName || ''],
+        function (err) {
+            if (err) {
+                if (err.message.includes('UNIQUE')) return res.status(400).json({ error: 'El email ya está registrado' });
+                return res.status(500).json({ error: err.message });
+            }
+            res.json({ id: this.lastID, email, firstName, lastName, role: 'user' });
+        }
+    );
+});
+
+// 2. Auth: Login
+app.post('/api/auth/login', (req, res) => {
+    const { email, password } = req.body;
+    db.get(`SELECT * FROM users WHERE email = ? AND password = ?`, [email, password], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(401).json({ error: 'Credenciales inválidas' });
+
+        // En prod: retornar JWT. Aquí retornamos el user object simple.
+        const { password, ...userWithoutPass } = row;
+        res.json(userWithoutPass);
+    });
+});
+
+// Store recovery codes in memory (Map: email -> { code, expires })
+const recoveryCodes = new Map();
+
+// 3. Auth: Recuperar Pass (Simulado)
+app.post('/api/auth/recover', (req, res) => {
+    const { email } = req.body;
+
+    db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) {
+            // For security, don't reveal if user exists or not, but for this demo/debug we can be looser or just standard.
+            // We'll just say "If email exists..."
+            console.log(`[Recovery] Email not found: ${email}`);
+            return res.json({ message: 'Si el correo existe, se enviaron instrucciones.' });
+        }
+
+        // Generate 6 digit code
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        recoveryCodes.set(email, { code, expires: Date.now() + 300000 }); // 5 mins
+
+        // LOG CODE TO CONSOLE (Simulation)
+        console.log('==============================================');
+        console.log(`[EMAIL SIMULATION] Recovery Code for ${email}: ${code}`);
+        console.log('==============================================');
+
+        res.json({ message: 'Si el correo existe, se enviaron instrucciones.', code });
+    });
+});
+
+app.post('/api/auth/reset', (req, res) => {
+    const { email, code, newPassword } = req.body;
+
+    const record = recoveryCodes.get(email);
+    if (!record || record.code !== code || Date.now() > record.expires) {
+        return res.status(400).json({ error: 'Código inválido o expirado' });
+    }
+
+    // Update password
+    db.run('UPDATE users SET password = ? WHERE email = ?', [newPassword, email], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+
+        recoveryCodes.delete(email); // Invalidate code
+        res.json({ message: 'Contraseña restablecida correctamente.' });
+    });
+});
+
+// Update Password (Authenticated)
+app.put('/api/users/password', (req, res) => {
+    const { email, currentPassword, newPassword } = req.body;
+
+    // First verify current
+    db.get('SELECT * FROM users WHERE email = ? AND password = ?', [email, currentPassword], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
+
+        // Update
+        db.run('UPDATE users SET password = ? WHERE email = ?', [newPassword, email], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Contraseña actualizada' });
+        });
+    });
+});
+
+// 4. Cursos: Listar (Público)
+app.get('/api/courses', (req, res) => {
+    db.all(`SELECT * FROM courses WHERE status = 'active'`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        // Parse modulesData
+        const courses = rows.map(c => ({
+            ...c,
+            modules: c.modulesData ? JSON.parse(c.modulesData) : []
+        }));
+        res.json(courses);
+    });
+});
+
+// Admin: Get All Courses (incluido inactivos)
+app.get('/api/admin/courses', (req, res) => {
+    db.all(`SELECT * FROM courses`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const courses = rows.map(c => ({
+            ...c,
+            modules: c.modulesData ? JSON.parse(c.modulesData) : []
+        }));
+        res.json(courses);
+    });
+});
+
+// Admin: Crear Curso
+app.post('/api/courses', (req, res) => {
+    const { title, desc, price, priceOffer, image, videoPromo, category, modules } = req.body;
+    const modulesStr = JSON.stringify(modules || []);
+
+    db.run(`INSERT INTO courses (title, desc, price, priceOffer, image, videoPromo, category, modulesData) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [title, desc, price, priceOffer, image, videoPromo, category, modulesStr],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ id: this.lastID, ...req.body });
+        }
+    );
+});
+
+// Admin: Editar Curso
+app.put('/api/courses/:id', (req, res) => {
+    const { id } = req.params;
+    const { title, desc, price, priceOffer, image, videoPromo, category, modules, status } = req.body;
+
+    // Construir query dinámico o update masivo
+    // Simplificamos actualizando todo lo enviado.
+    const modulesStr = modules ? JSON.stringify(modules) : null;
+
+    db.run(`UPDATE courses SET 
+            title = COALESCE(?, title), 
+            desc = COALESCE(?, desc), 
+            price = COALESCE(?, price), 
+            priceOffer = COALESCE(?, priceOffer), 
+            videoPromo = COALESCE(?, videoPromo), 
+            category = COALESCE(?, category),
+            modulesData = COALESCE(?, modulesData),
+            status = COALESCE(?, status)
+            WHERE id = ?`,
+        [title, desc, price, priceOffer, videoPromo, category, modulesStr, status, id],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ message: 'Curso actualizado' });
+        }
+    );
+});
+
+// Admin: Eliminar Curso
+app.delete('/api/courses/:id', (req, res) => {
+    db.run(`DELETE FROM courses WHERE id = ?`, [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Curso eliminado' });
+    });
+});
+
+
+// 5. Categorías (Simulado por ahora extrayendo de cursos o tabla separada. Usaremos tabla separada si da tiempo, sino hardcoded en DB o distinct)
+// Vamos a hacer un DISTINCT de la tabla cursos + una tabla auxiliar si se quiere gestionar vacías.
+// Por simplicidad en este paso, retornamos DISTINCT categorias de cursos + defaults.
+app.get('/api/categories', (req, res) => {
+    db.all("SELECT DISTINCT category FROM courses", [], (err, rows) => {
+        const cats = rows.map(r => r.category).filter(c => c);
+        // Agregar defaults si no están
+        const defaults = ['Fiscal', 'Contabilidad', 'Finanzas', 'Legal'];
+        const all = [...new Set([...defaults, ...cats])];
+        res.json(all);
+    });
+});
+// Para añadir categoria (stub para que el panel no falle)
+app.post('/api/categories', (req, res) => { res.json({ success: true }); });
+app.delete('/api/categories/:name', (req, res) => { res.json({ success: true }); });
+
+
+// 6. Ordenes & Stripe Checkout
+app.post('/api/checkout/session', async (req, res) => {
+    try {
+        const { items, userId, couponCode } = req.body; // items: [{ id: productId, qty: 1 }]
+
+        if (!items || items.length === 0) return res.status(400).json({ error: 'Carrito vacío' });
+
+        // 1. Validate Coupon
+        let discountMultiplier = 1;
+        if (couponCode) {
+            const coupon = await new Promise((resolve) => {
+                db.get("SELECT * FROM coupons WHERE code = ? AND status = 'active'", [couponCode], (err, row) => resolve(row));
+            });
+            if (coupon) {
+                // Apply discount (e.g. 10% -> 0.9 multiplier)
+                discountMultiplier = 1 - (coupon.discount / 100);
+            }
+        }
+
+        // 2. Build Stripe Items
+        const promises = items.map(async (item) => {
+            let product, price;
+
+            // ... inside map ...
+            if (item.id === 'membership-annual') {
+                // Get price from settings
+                const settings = await new Promise(resolve => {
+                    db.all("SELECT * FROM settings", [], (err, rows) => {
+                        const s = {}; rows.forEach(r => s[r.key] = r.value);
+                        resolve(s);
+                    });
+                });
+                const rawPrice = settings['membership_price_offer'] || settings['membership_price'] || 999;
+                price = parseFloat(rawPrice);
+                product = { title: 'Membresía Anual (Todo Incluido)', image: 'https://placehold.co/600x400?text=VIP' };
+                console.log(`[Checkout] Membership Base Price: ${price} (Raw: ${rawPrice})`);
+            } else {
+                // Get from DB
+                product = await new Promise((resolve, reject) => {
+                    db.get("SELECT * FROM courses WHERE id = ?", [item.id], (err, row) => {
+                        if (err || !row) resolve(null); else resolve(row);
+                    });
+                });
+                if (!product) throw new Error(`Producto ${item.id} no encontrado`);
+                price = product.priceOffer || product.price;
+            }
+
+            const finalPrice = price * discountMultiplier;
+            const unitAmount = Math.round(finalPrice * 100);
+
+            console.log(`[Checkout] Item: ${product.title}, Base: ${price}, DiscountMult: ${discountMultiplier}, Final: ${finalPrice}, UnitAmount: ${unitAmount}`);
+
+            return {
+                price_data: {
+                    currency: 'mxn',
+                    product_data: {
+                        name: product.title + (discountMultiplier < 1 ? ` (Desc. ${couponCode} -${Math.round((1 - discountMultiplier) * 100)}%)` : ''),
+                        images: product.image ? [product.image] : [],
+                    },
+                    unit_amount: unitAmount,
+                },
+                quantity: item.qty,
+            };
+        });
+
+        const stripeItems = await Promise.all(promises);
+
+        // Debug Log
+        console.log(`[Checkout] Creating session. User: ${userId}, Coupon: ${couponCode || 'None'}`);
+        stripeItems.forEach(i => {
+            console.log(` - Item: ${i.price_data.product_data.name}, Unit Amount: ${i.price_data.unit_amount}, Qty: ${i.quantity}`);
+        });
+
+        const totalAmount = stripeItems.reduce((acc, item) => acc + (item.price_data.unit_amount * item.quantity) / 100, 0);
+        console.log('[Checkout] Total calculated:', totalAmount);
+
+        // 3. Create Order in DB
+        console.log('[Checkout] Inserting order into DB...');
+        const orderId = await new Promise((resolve, reject) => {
+            db.run(`INSERT INTO orders (userId, total, items, status) VALUES (?, ?, ?, ?)`,
+                [userId || 0, totalAmount, JSON.stringify(items), 'pending'],
+                function (err) {
+                    if (err) reject(err);
+                    else resolve(this.lastID);
+                }
+            );
+        });
+        console.log('[Checkout] Order created in DB:', orderId);
+
+        const dbOrderId = `order_${orderId}`;
+
+        // TEST: HARDCODED PAYLOAD to verify if data is the issue
+        // SANITIZATION: Clean data to prevent Stripe hang
+        const cleanStripeItems = stripeItems.map(item => {
+            // Ensure unit amount is an integer
+            let amount = parseInt(item.price_data.unit_amount);
+            if (isNaN(amount) || amount < 0) amount = 0;
+
+            // Ensure quantity is positive integer
+            let qty = parseInt(item.quantity);
+            if (isNaN(qty) || qty < 1) qty = 1;
+
+            // Ensure images are valid URLs or empty array
+            let images = item.price_data.product_data.images || [];
+            if (!Array.isArray(images)) images = [];
+            images = images.filter(url => url && typeof url === 'string' && url.startsWith('http'));
+
+            return {
+                price_data: {
+                    currency: 'mxn',
+                    product_data: {
+                        name: String(item.price_data.product_data.name || 'Producto sin nombre').substring(0, 150),
+                        images: images
+                    },
+                    unit_amount: amount,
+                },
+                quantity: qty,
+            };
+        });
+        console.log('[Checkout] Payload Sanitized. Item Count:', cleanStripeItems.length);
+
+        // Force timeout wrapper - Server Side Protection
+        const session = await Promise.race([
+            stripe.checkout.sessions.create({
+                payment_method_types: ['card'],
+                line_items: cleanStripeItems,
+                mode: 'payment',
+                success_url: `${process.env.CLIENT_URL}/panel.html?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${process.env.CLIENT_URL}/cart.html?canceled=true`,
+                metadata: {
+                    orderId: dbOrderId,
+                    userId: userId ? userId.toString() : 'guest',
+                    coupon: couponCode || ''
+                },
+            }),
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Stripe API Timeout (12s Server Limit)')), 12000))
+        ]);
+        console.log('[Checkout] Stripe session URL:', session.url);
+
+        res.json({ url: session.url });
+    } catch (err) {
+        console.error("Stripe Checkout Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+// Legacy simple order creation kept for non-stripe tests if needed, but endpoint overwrites are tricky.
+// Let's modify the old api/orders to be just for admin manual usage or manual confirmation if needed, 
+// OR just leave it as is if it doesn't conflict. 
+// Actually, let's keep the old endpoint but maybe rename logic or assume frontend calls checkout now.
+// For now, I'll add the Stripe logic above and keep the old one below but commented out or renamed if it conflicts.
+// The old one was line 152: app.post('/api/orders'...
+// I will REPLACE the old order endpoint with one that just creates the order in DB, 
+// BUT users now want Stripe. So I will add the checkout endpoint separately.
+
+
+app.get('/api/orders', (req, res) => {
+    db.all(`SELECT * FROM orders ORDER BY createdAt DESC`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows.map(r => ({ ...r, items: JSON.parse(r.items || '[]') })));
+    });
+});
+
+app.delete('/api/orders/:id', (req, res) => {
+    db.run(`DELETE FROM orders WHERE id = ?`, [req.params.id], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: 'Orden eliminada' });
+    });
+});
+
+// 7. Cupones
+app.get('/api/coupons', (req, res) => {
+    db.all(`SELECT * FROM coupons`, [], (err, rows) => res.json(rows));
+});
+app.post('/api/coupons', (req, res) => {
+    const { code, discount } = req.body;
+    db.run(`INSERT INTO coupons (code, discount) VALUES (?, ?)`, [code, discount], function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ id: this.lastID, code, discount });
+    });
+});
+app.delete('/api/coupons/:id', (req, res) => {
+    db.run(`DELETE FROM coupons WHERE id = ?`, [req.params.id], (err) => res.json({ success: true }));
+});
+
+app.post('/api/coupons/validate', (req, res) => {
+    const { code } = req.body;
+    db.get("SELECT * FROM coupons WHERE code = ? AND status = 'active'", [code], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(404).json({ valid: false, message: 'Cupón no válido' });
+        res.json({ valid: true, code: row.code, discount: row.discount });
+    });
+});
+app.post('/api/coupons/validate', (req, res) => {
+    const { code } = req.body;
+    db.get("SELECT * FROM coupons WHERE code = ? AND status = 'active'", [code], (err, row) => {
+        if (err) return res.status(500).json({ error: err.message });
+        if (!row) return res.status(404).json({ valid: false, message: 'Cupón no válido' });
+        res.json({ valid: true, code: row.code, discount: row.discount });
+    });
+});
+
+// 8. Recursos
+app.get('/api/resources', (req, res) => {
+    // No devolver dataUrl gigante en lista
+    db.all(`SELECT id, name, description, type, url, createdAt FROM resources`, [], (err, rows) => res.json(rows));
+});
+app.post('/api/resources', (req, res) => {
+    const { name, type, dataUrl, description } = req.body;
+    db.run(`INSERT INTO resources (name, type, dataUrl, description) VALUES (?, ?, ?, ?)`,
+        [name, type, dataUrl, description || ''],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ id: this.lastID });
+        }
+    );
+});
+// Download Resource
+app.get('/api/resources/:id/download', (req, res) => {
+    db.get(`SELECT * FROM resources WHERE id = ?`, [req.params.id], (err, row) => {
+        if (err || !row) return res.status(404).json({ error: 'Resource not found' });
+        res.json(row);
+    });
+});
+
+app.delete('/api/resources/:id', (req, res) => {
+    db.run(`DELETE FROM resources WHERE id = ?`, [req.params.id], (err) => res.json({ success: true }));
+});
+
+// Settings API
+app.get('/api/settings', (req, res) => {
+    db.all(`SELECT * FROM settings`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        const settings = {};
+        rows.forEach(r => settings[r.key] = r.value);
+        res.json(settings);
+    });
+});
+
+app.post('/api/settings', (req, res) => {
+    const { settings } = req.body; // { key: value, ... }
+    if (!settings) return res.status(400).json({ error: 'Settings required' });
+
+    db.serialize(() => {
+        const stmt = db.prepare(`INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)`);
+        for (const [key, value] of Object.entries(settings)) {
+            stmt.run(key, String(value));
+        }
+        stmt.finalize();
+        res.json({ success: true });
+    });
+});
+
+
+// 9. Usuarios (Admin)
+app.get('/api/users', (req, res) => {
+    db.all(`SELECT id, email, firstName, lastName, role, status, createdAt FROM users`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        // Agregar "spent" dummy o calculado
+        // Recorrer ordenes para calcular spent... (buena práctica: JOIN, pero aqui JS)
+        db.all(`SELECT userId, total FROM orders`, [], (err2, orders) => {
+            const users = rows.map(u => {
+                const spent = orders.filter(o => o.userId === u.id).reduce((acc, o) => acc + o.total, 0);
+                const userOrders = orders.filter(o => o.userId === u.id);
+                // Get course names from orders logic could be complex, skipping for brevity
+                return { ...u, spent, courses: [] };
+            });
+            res.json(users);
+        });
+    });
+});
+app.put('/api/users/:email/status', (req, res) => {
+    const { status } = req.body;
+    db.run(`UPDATE users SET status = ? WHERE email = ?`, [status, req.params.email], (err) => res.json({ success: true }));
+});
+
+// 10. Dashboard & My Courses
+app.get('/api/my-courses', (req, res) => {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ error: 'UserId required' });
+
+    // Join enrollments with courses
+    const query = `
+        SELECT e.*, c.title, c.image, c.desc, c.modulesData 
+        FROM enrollments e
+        JOIN courses c ON e.courseId = c.id
+        WHERE e.userId = ?
+    `;
+
+    db.all(query, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const courses = rows.map(r => ({
+            id: r.courseId,
+            name: r.title,
+            image: r.image,
+            description: r.desc,
+            progress: r.progress,
+            lastAccess: r.lastAccess,
+            modules: r.modulesData ? JSON.parse(r.modulesData) : []
+        }));
+
+        res.json({ courses });
+    });
+});
+
+app.get('/api/dashboard', (req, res) => {
+    const userId = req.query.userId;
+    if (!userId) return res.status(400).json({ error: 'UserId required' });
+
+    // 1. Stats: Completed courses & Total hours (simulated logic for hours if not tracked strictly)
+    db.all(`SELECT * FROM enrollments WHERE userId = ?`, [userId], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        const completed = rows.filter(r => r.progress >= 100).length;
+        const totalHours = rows.reduce((acc, r) => acc + (r.totalHoursSpent || 0), 0);
+
+        // 2. Last continued course (most recent lastAccess)
+        // Sort by lastAccess desc
+        const sorted = rows.sort((a, b) => new Date(b.lastAccess) - new Date(a.lastAccess));
+        const lastEnrollment = sorted[0];
+
+        let lastCourse = null;
+        if (lastEnrollment) {
+            db.get(`SELECT title, image FROM courses WHERE id = ?`, [lastEnrollment.courseId], (err2, course) => {
+                if (course) {
+                    lastCourse = {
+                        id: lastEnrollment.courseId,
+                        title: course.title,
+                        image: course.image,
+                        progress: lastEnrollment.progress
+                    };
+                }
+                res.json({
+                    stats: { completed, totalHours },
+                    lastCourse
+                });
+            });
+        } else {
+            res.json({
+                stats: { completed, totalHours },
+                lastCourse: null
+            });
+        }
+    });
+});
+
+app.post('/api/progress', (req, res) => {
+    const { userId, courseId, progress, hoursToAdd } = req.body;
+
+    // Update progress
+    // If progress is provided, update it (if greater than current? optional logic, stick to overwrite for now or max)
+    // Update lastAccess = NOW
+    // Add hoursToAdd
+
+    let sql = `UPDATE enrollments SET lastAccess = CURRENT_TIMESTAMP`;
+    const params = [];
+
+    if (progress !== undefined) {
+        sql += `, progress = ?`;
+        params.push(progress);
+    }
+
+    if (hoursToAdd) {
+        sql += `, totalHoursSpent = totalHoursSpent + ?`;
+        params.push(hoursToAdd);
+    }
+
+    sql += ` WHERE userId = ? AND courseId = ?`;
+    params.push(userId, courseId);
+
+    db.run(sql, params, function (err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ success: true });
+    });
+});
+
+
+// Start
+app.listen(PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+});

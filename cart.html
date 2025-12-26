@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito de Compras - Gonzalo Juárez López Jr.</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <script src="./api.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
+                    },
+                    colors: {
+                        page: '#000000',
+                        card: '#121212',
+                        cardHover: '#18181b',
+                        borderDark: '#27272a',
+                        brandPink: '#D40B75',
+                        brandPinkHover: '#b00961',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+
+<body
+    class="m-0 p-0 w-full min-h-screen flex flex-col font-sans bg-page text-white selection:bg-brandPink selection:text-white"
+    x-data="{ mobileMenuOpen: false }">
+
+    <header
+        class="w-full h-[70px] sm:h-[80px] bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm border-b border-gray-100">
+        <a href="index.html" class="flex items-center cursor-pointer flex-shrink-0">
+            <img src="images/LOGOMORADOJULG.png" alt="JULG Logo" width="40" height="40"
+                class="object-contain sm:w-[45px] sm:h-[45px]">
+            <div class="ml-2 flex flex-col justify-center">
+                <span
+                    class="text-black font-serif font-bold text-[9px] sm:text-[10px] leading-none tracking-widest">GONZALO</span>
+                <span class="text-black font-serif text-[7px] sm:text-[8px] leading-none tracking-wider mt-[1px]">JUÁREZ
+                    LÓPEZ JR.</span>
+            </div>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-8 lg:gap-10">
+            <a href="index.html"
+                class="text-xs sm:text-sm font-semibold text-black hover:text-gray-600 transition-colors">Inicio</a>
+            <a href="tienda.html"
+                class="text-xs sm:text-sm font-semibold text-black hover:text-gray-600 transition-colors">Tienda</a>
+            <a href="panel.html"
+                class="text-xs sm:text-sm font-semibold text-black hover:text-gray-600 transition-colors">Mi panel</a>
+        </nav>
+
+        <div class="flex items-center gap-2 sm:gap-4" x-data="{ user: null }" x-init="
+            const check = () => { try { user = JSON.parse(localStorage.getItem('currentUser')); } catch(e){ user=null; } };
+            check();
+            window.addEventListener('storage', check); 
+            window.addEventListener('login-success', check);
+        ">
+            <!-- Guest View -->
+            <template x-if="!user">
+                <div class="flex items-center gap-2 sm:gap-4">
+                    <a href="login.html" class="hidden sm:block">
+                        <button
+                            class="px-3 sm:px-4 py-1.5 border border-black rounded-full text-xs font-medium text-black hover:bg-black hover:text-white transition-colors">Ingresar</button>
+                    </a>
+                    <a href="register.html" class="hidden sm:block">
+                        <button
+                            class="px-3 sm:px-4 py-1.5 bg-brandPink rounded-full text-xs font-medium text-white hover:bg-brandPinkHover transition-colors shadow-md">Iniciar
+                            sesión</button>
+                    </a>
+                </div>
+            </template>
+
+            <!-- User View -->
+            <template x-if="user">
+                <a href="panel.html"
+                    class="flex items-center gap-2 hover:bg-gray-100 rounded-full pr-3 pl-1 py-1 transition-colors">
+                    <div
+                        class="w-8 h-8 rounded-full bg-brandPink text-white flex items-center justify-center text-xs font-bold">
+                        <span x-text="(user.firstName || 'U')[0].toUpperCase()"></span>
+                    </div>
+                    <span class="text-xs font-medium text-black hidden sm:block" x-text="user.firstName"></span>
+                </a>
+            </template>
+            <button @click="handleUserIconClick()"
+                class="hidden md:flex w-8 h-8 sm:w-9 sm:h-9 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </button>
+            <a href="cart.html" class="flex-shrink-0">
+                <button
+                    class="w-8 h-8 sm:w-9 sm:h-9 bg-brandPink rounded flex items-center justify-center hover:bg-brandPinkHover transition-colors text-white shadow-md relative">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <span id="cart-count"
+                        class="absolute -top-1 -right-1 bg-black text-white text-[7px] sm:text-[9px] w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center rounded-full border border-white">1</span>
+                </button>
+            </a>
+            <button @click="mobileMenuOpen = !mobileMenuOpen"
+                class="md:hidden w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded hover:bg-gray-100 transition-colors">
+                <svg :class="{'rotate-180': mobileMenuOpen}" class="w-6 h-6 text-black transition-transform" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Menú móvil desplegable -->
+    <nav x-show="mobileMenuOpen" @click.outside="mobileMenuOpen = false"
+        class="fixed md:hidden top-[70px] sm:top-[80px] left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-40">
+        <div class="flex flex-col p-4 sm:p-6 space-y-3">
+            <a href="index.html"
+                class="text-sm font-semibold text-black hover:text-gray-600 transition-colors py-2 px-3 hover:bg-gray-100 rounded">Inicio</a>
+            <a href="tienda.html"
+                class="text-sm font-semibold text-black hover:text-gray-600 transition-colors py-2 px-3 hover:bg-gray-100 rounded">Tienda</a>
+            <a href="panel.html"
+                class="text-sm font-semibold text-black hover:text-gray-600 transition-colors py-2 px-3 hover:bg-gray-100 rounded">Mi
+                panel</a>
+            <hr class="my-2">
+            <a href="login.html"
+                class="text-sm font-semibold text-brandPink hover:text-brandPinkHover transition-colors py-2 px-3 hover:bg-gray-100 rounded">Ingresar</a>
+            <a href="register.html"
+                class="text-sm font-semibold text-white bg-brandPink hover:bg-brandPinkHover transition-colors py-2 px-3 rounded text-center">Iniciar
+                sesión</a>
+        </div>
+    </nav>
+
+    <div class="w-full bg-[#121212] py-8 border-b border-zinc-800">
+        <div class="max-w-4xl mx-auto px-4">
+            <div class="flex items-center justify-between relative">
+                <div class="absolute top-1/2 left-0 w-full h-[1px] bg-zinc-800 -z-0 -translate-y-[15px]"></div>
+
+                <div class="flex flex-col items-center relative z-10 group cursor-pointer">
+                    <div
+                        class="w-8 h-8 rounded-full bg-brandPink flex items-center justify-center text-xs font-bold text-white shadow-[0_0_15px_rgba(212,11,117,0.6)] mb-2">
+                        1</div>
+                    <span class="text-[10px] font-bold text-white tracking-wide">Tu carrito</span>
+                    <span class="text-[9px] text-zinc-500">Analizar producto</span>
+                </div>
+
+                <div class="flex flex-col items-center relative z-10 group">
+                    <div
+                        class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-500 mb-2">
+                        2</div>
+                    <span class="text-[10px] font-medium text-zinc-500">Pago</span>
+                    <span class="text-[9px] text-zinc-600">Transacción</span>
+                </div>
+
+                <div class="flex flex-col items-center relative z-10 group">
+                    <div
+                        class="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-500 mb-2">
+                        3</div>
+                    <span class="text-[10px] font-medium text-zinc-500">Confirmación</span>
+                    <span class="text-[9px] text-zinc-600">Compra completada</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-1 w-full max-w-6xl mx-auto py-8 sm:py-12 px-4 sm:px-6">
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-12" x-data="cartData()" x-init="init()">
+            <section class="lg:col-span-2 space-y-6">
+
+                <div class="flex items-center gap-2 mb-4">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <h2 class="text-base sm:text-lg font-medium text-white">Tu carrito</h2>
+                </div>
+
+                <div
+                    class="border border-borderDark rounded-xl p-4 sm:p-6 min-h-[300px] flex flex-col justify-center gap-4 bg-[#121212]">
+
+                    <template x-for="item in cart.items" :key="item.id">
+                        <div
+                            class="flex flex-col sm:flex-row items-start sm:items-center gap-4 sm:gap-6 p-3 sm:p-4 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-zinc-800 group">
+                            <div
+                                class="w-20 sm:w-32 h-14 sm:h-20 bg-zinc-800 rounded-lg overflow-hidden shrink-0 relative">
+                                <img :src="item.product.image || 'https://images.unsplash.com/photo-1626379953822-baec19c3accd?q=80&w=2670&auto=format&fit=crop'"
+                                    class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                    :alt="item.product.name">
+                            </div>
+
+                            <div class="flex-1 w-full">
+                                <h3 class="text-xs sm:text-sm font-semibold text-white mb-1" x-text="item.product.name">
+                                </h3>
+                                <p class="text-[9px] sm:text-[10px] text-zinc-500 mb-2"
+                                    x-text="item.product.description.substring(0, 40)"></p>
+                                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
+                                    <span class="text-sm sm:text-base font-bold text-white"
+                                        x-text="'$' + parseFloat(item.product.price).toFixed(2)"></span>
+                                    <input type="number" :value="item.quantity"
+                                        @change="updateQuantity(item.id, $event.target.value)"
+                                        class="w-10 sm:w-12 bg-black border border-zinc-700 rounded px-2 py-1 text-xs text-white text-center">
+                                    <span class="text-[9px] sm:text-[10px] text-zinc-500"
+                                        x-text="'Subtotal: $' + (item.product.price * item.quantity).toFixed(2)"></span>
+                                </div>
+                            </div>
+
+                            <button @click="removeItem(item.id)"
+                                class="text-zinc-500 hover:text-brandPink transition-colors p-2 rounded-full hover:bg-brandPink/10 shrink-0">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path
+                                        d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                    </path>
+                                    <line x1="10" y1="11" x2="10" y2="17"></line>
+                                    <line x1="14" y1="11" x2="14" y2="17"></line>
+                                </svg>
+                            </button>
+                        </div>
+                    </template>
+
+                    <div x-show="loading" class="text-center py-8">
+                        <p class="text-zinc-400 text-sm">Cargando carrito...</p>
+                    </div>
+
+                    <div x-show="!loading && cart.items.length === 0" class="text-center py-8">
+                        <p class="text-zinc-400 text-sm mb-4">Tu carrito está vacío</p>
+                        <a href="tienda.html" class="text-brandPink hover:underline text-xs sm:text-sm">Continuar
+                            comprando</a>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <section class="lg:col-span-1">
+                <div class="sticky top-20 border border-borderDark rounded-xl p-4 sm:p-6 bg-[#121212]">
+                    <h2
+                        class="text-sm sm:text-base font-medium text-white mb-4 sm:mb-6 pb-3 sm:pb-4 border-b border-zinc-800">
+                        Resumen del pedido</h2>
+
+                    <div class="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-zinc-400">Subtotal</span>
+                            <span class="text-white font-medium" x-text="'$' + (cart.subtotal || 0).toFixed(2)"></span>
+                        </div>
+
+                        <div x-show="cart.discount > 0" class="flex justify-between text-xs items-center">
+                            <span class="text-brandPink flex items-center gap-1">
+                                Descuento
+                                <button @click="removeCoupon()"
+                                    class="text-[9px] underline text-red-500 hover:text-red-400 ml-1">(Eliminar)</button>
+                            </span>
+                            <span class="text-brandPink font-medium"
+                                x-text="'-$' + (cart.discount || 0).toFixed(2)"></span>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-zinc-800 my-3 sm:my-4"></div>
+
+                    <div class="flex justify-between items-end mb-4 sm:mb-6">
+                        <span class="text-xs sm:text-sm font-semibold text-white">Total</span>
+                        <div class="text-right">
+                            <span class="text-lg sm:text-xl font-bold text-white"
+                                x-text="'$' + (cart.total || 0).toFixed(2)"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-4 flex gap-1 sm:gap-2 flex-col sm:flex-row">
+                        <input type="text" id="coupon-input" placeholder="Código de cupón"
+                            class="flex-1 bg-black border border-zinc-700 rounded px-2 sm:px-3 py-2 text-xs text-white placeholder-zinc-600">
+                        <button @click="applyCoupon()"
+                            class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-xs font-medium text-white transition-colors w-full sm:w-auto">
+                            Aplicar
+                        </button>
+                    </div>
+
+                    <button @click="checkout()" :disabled="!isLoggedIn() || cart.items.length === 0"
+                        class="w-full bg-gradient-to-r from-brandPink to-[#9c0856] hover:from-[#b00961] hover:to-[#7a0643] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 sm:py-3 rounded-lg text-xs sm:text-sm font-bold tracking-wide shadow-lg shadow-pink-900/20 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02]"
+                        x-text="!isLoggedIn() ? 'Inicia sesión para comprar' : cart.items.length === 0 ? 'Carrito vacío' : 'Proceder al pago'">
+                        Proceder al pago
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3">
+                            <path d="M5 12h14"></path>
+                            <path d="M12 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+
+                    <div x-show="error" class="mt-3 sm:mt-4 text-red-500 text-xs text-center" x-text="error"></div>
+
+                </div>
+            </section>
+        </div>
+
+        <section class="mt-12 sm:mt-20 border-t border-zinc-900 pt-8 sm:pt-10">
+            <h3 class="text-xs sm:text-sm font-bold text-white mb-4 sm:mb-6">Cursos recomendados para ti</h3>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                <template x-for="course in recommendedCourses" :key="course.id">
+                    <div @click="window.location.href='tienda.html'"
+                        class="aspect-video border border-zinc-800 rounded-lg bg-zinc-900/30 hover:bg-zinc-900 hover:border-zinc-700 transition-all cursor-pointer group relative overflow-hidden">
+                        <img :src="course.image" :alt="course.title"
+                            class="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity">
+                        <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 to-transparent p-3">
+                            <p class="text-[10px] text-brandPink font-bold"
+                                x-text="'$' + (course.priceOffer || course.price)"></p>
+                            <h4 class="text-xs text-white font-medium truncate" x-text="course.title"></h4>
+                        </div>
+                        <div
+                            class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
+                            <span
+                                class="text-xs font-medium text-white border border-white/30 bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm">Ver
+                                curso</span>
+                        </div>
+                    </div>
+                </template>
+                <div x-show="recommendedCourses.length === 0"
+                    class="col-span-full text-center py-8 text-zinc-500 text-xs">
+                    No hay recomendaciones por el momento.
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="./api.js?v=4"></script>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('cartData', () => ({
+                loading: true,
+                error: '',
+                cart: { items: [], subtotal: 0, discount: 0, total: 0, appliedCoupon: null },
+                recommendedCourses: [],
+
+                init() {
+                    console.log('Cart initialized');
+                    this.loadCart();
+                    this.loadRecommended();
+                    // Safety timeout
+                    setTimeout(() => {
+                        if (this.loading) {
+                            console.warn('Force clearing loading state');
+                            this.loading = false;
+                        }
+                    }, 3000);
+                },
+
+                isLoggedIn() {
+                    return window.API && window.API.isLoggedIn ? window.API.isLoggedIn() : false;
+                },
+
+                async loadRecommended() {
+                    try {
+                        if (!window.API || !window.API.apiGetCourses) return;
+                        const courses = await window.API.apiGetCourses();
+                        const cartIds = this.cart.items.map(i => i.product.id);
+                        this.recommendedCourses = courses
+                            .filter(c => !cartIds.includes(c.id.toString()))
+                            .sort(() => 0.5 - Math.random())
+                            .slice(0, 4);
+                    } catch (e) {
+                        console.warn('Error loading recommended:', e);
+                    }
+                },
+
+                async loadCart() {
+                    try {
+                        // Slight delay to ensure API is fully ready if needed
+                        if (!window.API) {
+                            await new Promise(r => setTimeout(r, 500));
+                        }
+
+                        if (!window.API) {
+                            console.error('API missing');
+                            throw new Error('API no cargada. Recarga la página.');
+                        }
+
+                        const data = await window.API.apiGetCart();
+                        console.log('Cart data loaded:', data);
+
+                        this.cart = {
+                            items: data.items || [],
+                            subtotal: data.subtotal || 0,
+                            discount: 0,
+                            total: data.total || 0,
+                            appliedCoupon: null
+                        };
+
+                        // Check for saved coupon
+                        const savedCoupon = localStorage.getItem('activeCoupon');
+                        if (savedCoupon) {
+                            try {
+                                const couponData = JSON.parse(savedCoupon);
+                                this.cart.appliedCoupon = couponData.code;
+                                this.cart.discountPercent = couponData.discount;
+                                const discountAmount = this.cart.subtotal * (couponData.discount / 100);
+                                this.cart.discount = discountAmount;
+                                this.cart.total = this.cart.subtotal - discountAmount;
+                            } catch (e) { localStorage.removeItem('activeCoupon'); }
+                        }
+
+                        // Explicit zeroing if empty
+                        if (this.cart.items.length === 0) {
+                            this.cart.subtotal = 0;
+                            this.cart.discount = 0;
+                            this.cart.total = 0;
+                            this.cart.appliedCoupon = null;
+                            localStorage.removeItem('activeCoupon');
+                        }
+
+                        // Update header count
+                        try {
+                            const total = this.cart.items.reduce((acc, it) => acc + it.quantity, 0);
+                            const el = document.getElementById('cart-count');
+                            if (el) el.textContent = total;
+                        } catch (e) { }
+
+                    } catch (err) {
+                        console.error('Error loading cart:', err);
+                        this.error = err.message || 'Error cargando carrito';
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                async updateQuantity(itemId, newQuantity) {
+                    try {
+                        const quantity = parseInt(newQuantity);
+                        if (quantity <= 0) {
+                            await this.removeItem(itemId);
+                            return;
+                        }
+                        await window.API.apiUpdateCartItem(itemId, quantity);
+                        await this.loadCart();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async removeItem(itemId) {
+                    try {
+                        await window.API.apiRemoveFromCart(itemId);
+                        await this.loadCart();
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+
+                async removeCoupon() {
+                    try {
+                        this.cart.appliedCoupon = null;
+                        this.cart.discount = 0;
+                        this.cart.discountPercent = 0;
+                        this.cart.total = this.cart.subtotal;
+                        localStorage.removeItem('activeCoupon');
+                        await this.loadCart();
+                        this.error = '';
+                    } catch (err) {
+                        console.error(err);
+                    }
+                },
+
+                async applyCoupon() {
+                    try {
+                        this.error = '';
+                        const codeInput = document.getElementById('coupon-input');
+                        const code = codeInput ? codeInput.value.trim() : '';
+                        if (!code) {
+                            this.error = 'Ingresa un código de cupón';
+                            return;
+                        }
+                        const result = await window.API.apiValidateCoupon(code);
+                        if (result.valid) {
+                            const couponData = { code: result.code, discount: result.discount };
+                            localStorage.setItem('activeCoupon', JSON.stringify(couponData));
+                            await this.loadCart();
+                        } else {
+                            this.error = 'Cupón inválido';
+                            localStorage.removeItem('activeCoupon');
+                            await this.loadCart();
+                        }
+                    } catch (err) {
+                        this.error = err.message || 'Error al aplicar cupón';
+                        localStorage.removeItem('activeCoupon');
+                    }
+                },
+
+                async checkout() {
+                    try {
+                        this.error = '';
+                        if (!this.isLoggedIn()) {
+                            window.location.href = 'login.html?redirect=cart';
+                            return;
+                        }
+                        if (this.cart.items.length === 0) {
+                            this.error = 'El carrito está vacío';
+                            return;
+                        }
+
+                        const btn = document.querySelector('button[x-text*="Proceder"]');
+                        if (btn) { btn.disabled = true; btn.innerText = 'Redirigiendo...'; }
+
+                        const response = await window.API.apiCreateCheckoutSession(
+                            this.cart.items.map(i => ({ id: i.product.id, qty: i.quantity })),
+                            this.cart.appliedCoupon
+                        );
+
+                        if (response.url) {
+                            window.location.href = response.url;
+                        } else {
+                            throw new Error(response.error || 'Error al iniciar pago');
+                        }
+                    } catch (err) {
+                        this.error = err.message || 'Error de conexión';
+                        const btn = document.querySelector('button[x-text*="Proceder"]');
+                        if (btn) { btn.disabled = false; btn.innerText = 'Proceder al pago'; }
+                        console.error(err);
+                    }
+                }
+            }));
+        });
+
+        // Global listener for cart updates
+        window.addEventListener('storage', async (e) => {
+            if (e.key === 'cart' || e.key === 'currentUser') {
+                try {
+                    const el = document.getElementById('cart-count');
+                    if (window.API && el) {
+                        const data = await window.API.apiGetCart();
+                        const total = data.items.reduce((acc, it) => acc + it.quantity, 0);
+                        el.textContent = total;
+                    }
+                } catch (err) { }
+            }
+        });
+
+        // Manejo del icono de usuario
+        function handleUserIconClick() {
+            if (window.API && window.API.isLoggedIn()) {
+                window.location.href = 'panel.html?tab=configuracion';
+            } else {
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tienda - Gonzalo Juárez López Jr.</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
+                    },
+                    colors: {
+                        page: '#000000',
+                        card: '#121212',
+                        cardHover: '#18181b',
+                        borderDark: '#27272a',
+                        brandPink: '#D40B75',
+                        brandPinkHover: '#b00961',
+                        accentPurple: '#8b5cf6',
+                    }
+                }
+            }
+        }
+        // Manejo del icono de usuario
+        function handleUserIconClick() {
+            if (window.API && window.API.isLoggedIn()) {
+                window.location.href = 'panel.html?tab=configuracion';
+            } else {
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #000000;
+        }
+
+        .custom-checkbox {
+            appearance: none;
+            background-color: transparent;
+            border: 1px solid #3f3f46;
+            border-radius: 4px;
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .custom-checkbox:checked {
+            background-color: #D40B75;
+            border-color: #D40B75;
+        }
+
+        .custom-checkbox:checked::after {
+            content: '✔';
+            font-size: 10px;
+            color: white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+
+<body class="m-0 p-0 w-full min-h-screen flex flex-col font-sans text-white" x-data="{ mobileMenuOpen: false }">
+
+    <header
+        class="w-full h-[70px] sm:h-[80px] bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm border-b border-gray-100">
+        <a href="index.html" class="flex items-center cursor-pointer flex-shrink-0">
+            <img src="images/LOGOMORADOJULG.png" alt="JULG Logo" width="40" height="40"
+                class="object-contain sm:w-[45px] sm:h-[45px]">
+            <div class="ml-2 flex flex-col justify-center">
+                <span
+                    class="text-black font-serif font-bold text-[9px] sm:text-[10px] leading-none tracking-widest">GONZALO</span>
+                <span class="text-black font-serif text-[7px] sm:text-[8px] leading-none tracking-wider mt-[1px]">JUÁREZ
+                    LÓPEZ JR.</span>
+            </div>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-8 lg:gap-10">
+            <a href="index.html"
+                class="text-xs sm:text-sm font-semibold text-black hover:text-gray-600 transition-colors">Inicio</a>
+            <a href="tienda.html"
+                class="text-xs sm:text-sm font-bold text-brandPink transition-colors border-b-2 border-brandPink pb-1">Tienda</a>
+            <a href="panel.html"
+                class="text-xs sm:text-sm font-semibold text-black hover:text-gray-600 transition-colors">Mi panel</a>
+        </nav>
+
+        <div class="flex items-center gap-2 sm:gap-4">
+            <button @click="handleUserIconClick()"
+                class="hidden md:flex w-8 h-8 sm:w-9 sm:h-9 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </button>
+            <a href="cart.html" class="flex-shrink-0">
+                <button
+                    class="w-8 h-8 sm:w-9 sm:h-9 bg-brandPink rounded flex items-center justify-center hover:bg-brandPinkHover transition-colors text-white shadow-md relative">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                    <span id="cart-count"
+                        class="absolute -top-1 -right-1 bg-black text-white text-[7px] sm:text-[9px] w-3.5 h-3.5 sm:w-4 sm:h-4 flex items-center justify-center rounded-full border border-white">0</span>
+                </button>
+            </a>
+            <button @click="mobileMenuOpen = !mobileMenuOpen"
+                class="md:hidden w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded hover:bg-gray-100 transition-colors">
+                <svg :class="{'rotate-180': mobileMenuOpen}" class="w-6 h-6 text-black transition-transform" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Menú móvil desplegable -->
+    <nav x-show="mobileMenuOpen" @click.outside="mobileMenuOpen = false"
+        class="fixed md:hidden top-[70px] sm:top-[80px] left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-40">
+        <div class="flex flex-col p-4 sm:p-6 space-y-3">
+            <a href="index.html"
+                class="text-sm font-semibold text-black hover:text-gray-600 transition-colors py-2 px-3 hover:bg-gray-100 rounded">Inicio</a>
+            <a href="tienda.html" class="text-sm font-bold text-brandPink bg-pink-50 py-2 px-3 rounded">Tienda</a>
+            <a href="panel.html"
+                class="text-sm font-semibold text-black hover:text-gray-600 transition-colors py-2 px-3 hover:bg-gray-100 rounded">Mi
+                panel</a>
+            <hr class="my-2">
+            <a href="login.html"
+                class="text-sm font-semibold text-brandPink hover:text-brandPinkHover transition-colors py-2 px-3 hover:bg-gray-100 rounded">Ingresar</a>
+            <a href="register.html"
+                class="text-sm font-semibold text-white bg-brandPink hover:bg-brandPinkHover transition-colors py-2 px-3 rounded text-center">Registrarse</a>
+        </div>
+    </nav>
+
+    <main class="flex-1 w-full max-w-[1400px] mx-auto pt-6 sm:pt-8 pb-20 px-4 sm:px-6">
+
+        <div class="mb-6 sm:mb-8">
+            <h1 class="text-2xl sm:text-3xl font-bold text-center mb-4 sm:mb-6">Todos los cursos</h1>
+            <div class="relative w-full">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <input type="text"
+                    class="block w-full pl-10 pr-3 py-2.5 sm:py-3 border border-borderDark rounded-lg leading-5 bg-card text-zinc-300 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 focus:ring-0 sm:text-sm text-xs transition-colors"
+                    placeholder="Buscar curso...">
+            </div>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-6 sm:gap-8">
+
+            <aside class="w-full lg:w-64 flex-shrink-0 space-y-6 sm:space-y-8">
+
+                <div>
+                    <h3
+                        class="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 pb-2 border-b border-zinc-800">
+                        Categorías</h3>
+                    <ul class="space-y-2">
+                        <li>
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <div
+                                    class="w-3 h-3 rounded-full border border-brandPink bg-brandPink shadow-[0_0_8px_rgba(212,11,117,0.5)]">
+                                </div>
+                                <span
+                                    class="text-sm text-white font-medium group-hover:text-brandPink transition-colors">Todas
+                                    las categorías</span>
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h3
+                        class="text-sm font-semibold text-zinc-400 uppercase tracking-wider mb-4 pb-2 border-b border-zinc-800">
+                        Opciones</h3>
+                    <ul class="space-y-3">
+                        <li class="flex items-center gap-3">
+                            <input type="checkbox" class="custom-checkbox">
+                            <span class="text-sm text-zinc-400 hover:text-white cursor-pointer transition-colors">Todos
+                                los cursos</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <input type="checkbox" class="custom-checkbox">
+                            <span class="text-sm text-zinc-400 hover:text-white cursor-pointer transition-colors">Más
+                                populares</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <input type="checkbox" class="custom-checkbox">
+                            <span
+                                class="text-sm text-zinc-400 hover:text-white cursor-pointer transition-colors">Recientemente
+                                añadidos</span>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+
+            <section class="flex-1">
+
+                <div class="flex justify-between items-end mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Catálogo</h2>
+                        <p class="text-xs text-zinc-400 mt-1">Explora nuestros recursos educativos</p>
+                    </div>
+
+                    <div class="relative">
+                        <button
+                            class="flex items-center gap-2 text-xs text-zinc-300 border border-zinc-700 bg-card px-3 py-1.5 rounded hover:border-zinc-500 transition-colors">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                                <polyline points="17 6 23 6 23 12"></polyline>
+                            </svg>
+                            Más relevantes
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M6 9l6 6 6-6" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-data="productsGrid()"
+                    x-init="loadProducts()">
+
+                    <template x-for="product in products" :key="product.id">
+                        <article
+                            class="bg-card rounded-xl overflow-hidden border border-borderDark hover:border-zinc-600 transition-all duration-300 group flex flex-col h-full">
+                            <div class="relative h-44 overflow-hidden bg-zinc-900">
+                                <img :src="product.image || 'https://images.unsplash.com/photo-1503387762-592deb58ef4e?q=80&w=2531&auto=format&fit=crop'"
+                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                    :alt="product.name">
+                                <span
+                                    class="absolute top-3 left-3 bg-white/90 backdrop-blur text-black text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wide">
+                                    <span x-show="product.stock > 0">En stock</span>
+                                    <span x-show="product.stock <= 0">Agotado</span>
+                                </span>
+                            </div>
+
+                            <div class="p-4 flex flex-col flex-1">
+                                <h3 class="text-sm font-bold text-white leading-tight mb-1" x-text="product.name"></h3>
+                                <p class="text-[10px] text-zinc-500 mb-2"
+                                    x-text="product.description.substring(0, 50) + '...'"></p>
+
+                                <div class="mt-auto mb-4">
+                                    <span class="text-lg font-bold text-white"
+                                        x-text="'$' + parseFloat(product.price).toFixed(2)"></span>
+                                </div>
+
+                                <div class="flex gap-2 mt-auto">
+                                    <button @click="addToCart(product.id, $event)"
+                                        :disabled="!isLoggedIn() || product.stock <= 0"
+                                        class="flex-1 bg-brandPink hover:bg-brandPinkHover disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold rounded py-2 transition-colors uppercase tracking-wide shadow-lg shadow-pink-900/20"
+                                        x-text="!isLoggedIn() ? 'Inicia sesión' : product.stock <= 0 ? 'Agotado' : 'Comprar'">
+                                    </button>
+                                </div>
+                            </div>
+                        </article>
+                    </template>
+
+                    <div x-show="loading" class="col-span-full text-center py-8">
+                        <p class="text-zinc-400">Cargando productos...</p>
+                    </div>
+
+                    <div x-show="!loading && products.length === 0" class="col-span-full text-center py-8">
+                        <p class="text-zinc-400">No hay productos disponibles</p>
+                    </div>
+
+                </div>
+
+            </section>
+            </section>
+        </div>
+
+        <!-- Membership Banner -->
+        <div
+            class="mt-12 bg-gradient-to-r from-brandPink to-purple-900 rounded-2xl p-8 sm:p-12 relative overflow-hidden">
+            <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10">
+            </div>
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div class="text-center md:text-left">
+                    <h2 class="text-3xl font-bold text-white mb-2">Membresía Anual Todo Incluido</h2>
+                    <p class="text-pink-100 max-w-xl">Obtén acceso ilimitado a todos los cursos de la plataforma,
+                        recursos exclusivos y soporte prioritario por un año completo.</p>
+                </div>
+                <div class="flex flex-col items-center gap-2">
+                    <button onclick="window.productsGrid().addToCart('membership-annual', event)"
+                        class="bg-white text-brandPink hover:bg-gray-100 font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105">
+                        Suscribirse Ahora
+                    </button>
+                    <p class="text-xs text-white/80">Pago único, sin renovación automática</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-16 mb-8 pt-8 border-t border-zinc-800">
+            <h2 class="text-xl font-bold text-white mb-6">Recursos Gratuitos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" x-data="resourcesGrid()"
+                x-init="loadResources()">
+                <template x-for="resource in resources" :key="resource.id">
+                    <article
+                        class="bg-card rounded-xl border border-zinc-800 p-6 hover:border-zinc-600 transition group relative">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="p-3 bg-zinc-900 rounded-lg">
+                                <svg class="w-6 h-6 text-brandPink" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z">
+                                    </path>
+                                </svg>
+                            </div>
+                            <span class="text-xs text-zinc-500 uppercase font-bold tracking-wider"
+                                x-text="resource.type.split('/')[1] || 'FILE'"></span>
+                        </div>
+                        <h3 class="font-bold text-white mb-2" x-text="resource.name"></h3>
+                        <p class="text-xs text-zinc-400 mb-4 line-clamp-3"
+                            x-text="resource.description || 'Sin descripción'"></p>
+
+                        <button @click="downloadResource(resource)"
+                            class="w-full py-2 rounded border border-zinc-700 hover:bg-zinc-800 hover:text-white text-zinc-400 text-xs font-bold transition flex items-center justify-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Descargar
+                        </button>
+                    </article>
+                </template>
+                <div x-show="resources.length === 0" class="col-span-full text-center py-8">
+                    <p class="text-zinc-500 text-sm">Próximamente recursos disponibles.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+</body>
+
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<script src="./api.js"></script>
+
+<script>
+    window.productsGrid = function () {
+        return {
+            products: [],
+            loading: true,
+            isLoggedIn() {
+                return window.API && window.API.isLoggedIn ? window.API.isLoggedIn() : false;
+            },
+            async loadProducts() {
+                try {
+                    const response = await (window.API ? window.API.apiGetProducts() : (window.__loadAPI && (await window.__loadAPI()).apiGetProducts()));
+                    this.products = Array.isArray(response) ? response : response.data || [];
+                } catch (err) {
+                    console.error('Error loading products:', err);
+                } finally {
+                    this.loading = false;
+                    // Expose reload hook for storage events
+                    window.__reloadTienda = () => { this.loadProducts(); };
+                    // Also initialize cart count when products load
+                    try { updateCartCount(); } catch (e) { }
+                }
+            },
+            async addToCart(productId, ev) {
+                try {
+                    // Find the product img element to animate
+                    let imgEl = null;
+                    try { imgEl = ev.target.closest('article').querySelector('img'); } catch (e) { imgEl = null; }
+                    if (imgEl) flyToCart(imgEl);
+                    console.log(`[Store] Adding product ${productId}...`);
+                    const result = await (window.API ? window.API.apiAddToCart(productId, 1) : (await window.__loadAPI()).apiAddToCart(productId, 1));
+                    console.log(`[Store] Added. New Cart:`, result);
+                    await updateCartCount();
+                    showToast('✅ Curso agregado al carrito');
+                } catch (err) {
+                    console.error('[Store] Error adding to cart:', err);
+                    showToast('❌ ' + (err.message || 'Error al agregar al carrito'));
+                }
+            }
+        }
+    }
+
+    window.resourcesGrid = function () {
+        return {
+            resources: [],
+            async loadResources() {
+                try {
+                    const data = await (window.API ? window.API.apiGetResources() : []);
+                    this.resources = data;
+                } catch (e) { console.error(e); }
+            },
+            async downloadResource(res) {
+                try {
+                    // Fetch full data for download (including base64 if needed)
+                    // or just open URL if it's a link. Here we assume we fetch the full object again to get DataURL
+                    const fullRes = await fetch(`http://localhost:3000/api/resources/${res.id}/download`).then(r => r.json());
+                    if (fullRes.dataUrl) {
+                        const a = document.createElement('a');
+                        a.href = fullRes.dataUrl;
+                        a.download = fullRes.name;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    } else if (fullRes.url) {
+                        window.open(fullRes.url, '_blank');
+                    }
+                } catch (e) { showToast('Error al descargar'); }
+            }
+        }
+    }
+</script>
+
+<script>
+    // Simple toast for Tienda
+    function showToast(msg) {
+        const el = document.createElement('div');
+        el.className = 'fixed bottom-4 right-4 bg-black text-white px-4 py-2 rounded shadow';
+        el.textContent = msg;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 2500);
+    }
+
+    // Fly image to cart animation
+    function flyToCart(imgEl) {
+        const rect = imgEl.getBoundingClientRect();
+        const clone = imgEl.cloneNode(true);
+        clone.style.position = 'fixed';
+        clone.style.left = rect.left + 'px';
+        clone.style.top = rect.top + 'px';
+        clone.style.width = rect.width + 'px';
+        clone.style.height = rect.height + 'px';
+        clone.style.transition = 'all 800ms cubic-bezier(.2,.8,.2,1)';
+        clone.style.zIndex = 9999;
+        document.body.appendChild(clone);
+        const target = document.querySelector('#cart-count');
+        if (!target) { setTimeout(() => clone.remove(), 900); return; }
+        const tRect = target.getBoundingClientRect();
+        requestAnimationFrame(() => {
+            clone.style.transform = `translate(${tRect.left - rect.left}px, ${tRect.top - rect.top}px) scale(0.15)`;
+            clone.style.opacity = '0.8';
+        });
+        setTimeout(() => {
+            clone.remove();
+            // little pulse on cart
+            pulseCart();
+        }, 900);
+    }
+
+    function pulseCart() {
+        const cart = document.querySelector('#cart-count');
+        if (!cart) return;
+        cart.style.transform = 'scale(1.25)';
+        cart.style.transition = 'transform 200ms ease';
+        setTimeout(() => { cart.style.transform = 'scale(1)'; }, 250);
+    }
+
+    async function updateCartCount() {
+        try {
+            const data = await (window.API ? window.API.apiGetCart() : (await window.__loadAPI()).apiGetCart());
+            const total = data.items.reduce((acc, it) => acc + it.quantity, 0);
+            const el = document.getElementById('cart-count');
+            if (el) el.textContent = total;
+        } catch (e) { /* not logged-in or error */ }
+    }
+
+    // Storage event: reload products and update cart count on changes from other tabs
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'courses') {
+            if (typeof window.__reloadTienda === 'function') window.__reloadTienda();
+        }
+        if (e.key === 'carts' || e.key === 'currentUser') {
+            updateCartCount();
+        }
+    });
+
+    // Provide reload hook for other scripts (used in storage handler)
+    // The productsGrid will set `window.__reloadTienda = () => this.loadProducts();` during init.
+    updateCartCount().catch(() => { });
+</script>
+
+</html>

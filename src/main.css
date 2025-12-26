@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #FF00AA;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #D0243D;
+}
+
+/* Smooth transitions */
+* {
+    @apply transition-colors duration-300;
+}
+
+/* Hero section animations */
+@keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+/* Button hover effects */
+button {
+    @apply transition-all duration-300;
+}
+
+button:hover {
+    @apply transform scale-105;
+}
+
+/* Text gradients */
+.gradient-text {
+    @apply bg-gradient-to-r from-bright-pink to-magenta bg-clip-text text-transparent;
+}
+
+/* Card hover effects */
+.card-hover {
+    @apply transition-all duration-300 hover:shadow-2xl;
+}
+
+/* Star rating */
+.star {
+    position: relative;
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: .6em;
+    margin-right: .6em;
+    margin-bottom: 1.2em;
+    border-right: .3em solid transparent;
+    border-bottom: .7em solid #FF00AA;
+    border-left: .3em solid transparent;
+    font-size: 12px;
+}
+
+.star:before,
+.star:after {
+    content: '';
+    display: block;
+    width: 0;
+    height: 0;
+    position: absolute;
+    top: .6em;
+    left: -1em;
+    border-right: 1em solid transparent;
+    border-bottom: .7em solid #FF00AA;
+    border-left: 1em solid transparent;
+    transform: rotate(-35deg);
+}
+
+.star:after {
+    transform: rotate(35deg);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    h1 {
+        @apply text-3xl;
+    }
+    
+    h2 {
+        @apply text-2xl;
+    }
+    
+    button {
+        @apply text-sm;
+    }
+}
+
+/* Section spacing */
+section {
+    @apply scroll-smooth;
+}

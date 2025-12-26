@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Panel Completo - Gonzalo Juárez López Jr.</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Cinzel', 'serif'],
+                    },
+                    colors: {
+                        page: '#000000',
+                        card: '#121212',
+                        inputBg: '#121212',
+                        inputBorder: '#333333',
+                        brandPink: '#9F1253',
+                        brandPinkHover: '#be185d',
+                        borderDark: '#27272a',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #000000;
+        }
+
+        /* Utilidad para ocultar/mostrar pestañas */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Estilos base para inputs del formulario (estilo Shadcn) */
+        .shadcn-input {
+            width: 100%;
+            background-color: #121212;
+            border: 1px solid #333;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            /* text-xs */
+            color: white;
+            transition: border-color 0.2s;
+        }
+
+        .shadcn-input:focus {
+            outline: none;
+            border-color: #555;
+        }
+
+        /* Estilos tabla */
+        th {
+            font-weight: 500;
+            color: #a1a1aa;
+            padding-bottom: 1rem;
+        }
+
+        td {
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #27272a;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body class="m-0 p-0 w-full min-h-screen flex flex-col font-sans text-white" x-data="{ mobileMenuOpen: false }">
+
+    <header
+        class="w-full h-[70px] sm:h-[80px] bg-white px-4 sm:px-8 flex items-center justify-between sticky top-0 z-50 shadow-sm">
+        <a href="index.html" class="flex items-center flex-shrink-0">
+            <img src="images/LOGOMORADOJULG.png" alt="JULG Logo" width="40" height="40"
+                class="object-contain sm:w-[45px] sm:h-[45px]">
+            <div class="ml-2 flex flex-col justify-center hidden sm:flex">
+                <span
+                    class="text-black font-serif font-bold text-[9px] sm:text-[10px] leading-none tracking-widest">GONZALO</span>
+                <span class="text-black font-serif text-[7px] sm:text-[8px] leading-none tracking-wider mt-[2px]">JUÁREZ
+                    LÓPEZ JR.</span>
+            </div>
+        </a>
+
+        <nav class="hidden md:flex items-center gap-8 lg:gap-10">
+            <a href="index.html"
+                class="text-xs sm:text-sm font-semibold text-black hover:text-gray-600 transition-colors">Inicio</a>
+            <a href="tienda.html"
+                class="text-xs sm:text-sm font-semibold text-black hover:text-gray-600 transition-colors">Tienda</a>
+            <a href="panel.html">
+                <button
+                    class="bg-brandPink text-white px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-xs font-semibold flex items-center gap-2 shadow-md hover:bg-brandPinkHover transition-colors">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" />
+                    </svg>
+                    Mi panel
+                </button>
+            </a>
+        </nav>
+
+        <div class="flex items-center gap-2 sm:gap-4">
+            <button
+                class="hidden md:flex w-8 h-8 sm:w-9 sm:h-9 border border-gray-300 rounded flex items-center justify-center hover:bg-gray-100 transition-colors">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+            </button>
+            <a href="cart.html" class="flex-shrink-0">
+                <button
+                    class="w-8 h-8 sm:w-9 sm:h-9 bg-brandPink rounded flex items-center justify-center hover:bg-brandPinkHover transition-colors text-white shadow-md">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="9" cy="21" r="1"></circle>
+                        <circle cx="20" cy="21" r="1"></circle>
+                        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                    </svg>
+                </button>
+            </a>
+            <button @click="mobileMenuOpen = !mobileMenuOpen"
+                class="md:hidden w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded hover:bg-gray-100 transition-colors">
+                <svg :class="{'rotate-180': mobileMenuOpen}" class="w-6 h-6 text-black transition-transform" fill="none"
+                    stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16">
+                    </path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Menú móvil desplegable -->
+    <nav x-show="mobileMenuOpen" @click.outside="mobileMenuOpen = false"
+        class="fixed md:hidden top-[70px] sm:top-[80px] left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-40">
+        <div class="flex flex-col p-4 sm:p-6 space-y-3">
+            <a href="index.html"
+                class="text-sm font-semibold text-black hover:text-gray-600 transition-colors py-2 px-3 hover:bg-gray-100 rounded">Inicio</a>
+            <a href="tienda.html"
+                class="text-sm font-semibold text-black hover:text-gray-600 transition-colors py-2 px-3 hover:bg-gray-100 rounded">Tienda</a>
+            <a href="panel.html"
+                class="text-sm font-bold text-white bg-brandPink hover:bg-brandPinkHover transition-colors py-2 px-3 rounded text-center">Mi
+                panel</a>
+        </div>
+    </nav>
+
+    <main class="flex-1 bg-page pt-12 pb-20 px-4 sm:px-8">
+        <div class="max-w-[1100px] mx-auto space-y-12">
+
+            <!-- Dashboard Top Section -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8" x-data="dashboardData()" x-init="loadStats()">
+                <!-- Stats Card -->
+                <div
+                    class="border border-borderDark rounded-xl p-8 flex flex-col items-center justify-center h-[250px] bg-card/30">
+                    <div
+                        class="w-20 h-20 rounded-full bg-brandPink flex items-center justify-center mb-4 shadow-lg shadow-pink-900/20">
+                        <span class="text-2xl font-bold text-white" x-text="initials">NC</span>
+                    </div>
+                    <h2 class="text-sm font-semibold mb-6 text-white" x-text="fullName">Usuario</h2>
+                    <div class="flex gap-12 text-center text-white">
+                        <div>
+                            <div class="text-sm font-medium" x-text="stats.completed">0</div>
+                            <div class="text-[10px] text-zinc-400 mt-1">Cursos completados</div>
+                        </div>
+                        <div>
+                            <div class="text-sm font-medium" x-text="stats.totalHours.toFixed(1)">0</div>
+                            <div class="text-[10px] text-zinc-400 mt-1">Horas totales</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Continue Watching Card -->
+                <template x-if="lastCourse">
+                    <div class="border border-borderDark rounded-xl overflow-hidden relative h-[250px] group cursor-pointer"
+                        @click="window.location.href='course.html?id=' + lastCourse.id">
+                        <img :src="lastCourse.image || 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=2626&auto=format&fit=crop'"
+                            class="absolute inset-0 w-full h-full object-cover opacity-40 grayscale group-hover:scale-105 transition-transform duration-500"
+                            @error="$el.src='https://images.unsplash.com/photo-1554224155-6726b3ff858f?q=80&w=2626&auto=format&fit=crop'">
+                        <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                        <div class="absolute inset-0 p-8 flex flex-col justify-between">
+                            <div><span
+                                    class="px-3 py-1 rounded border border-zinc-600 bg-black/50 backdrop-blur-sm text-[10px] text-zinc-300">Continuar
+                                    viendo</span></div>
+                            <div class="w-full">
+                                <h3 class="text-xl font-bold mb-1 text-white" x-text="lastCourse.title">Titulo</h3>
+                                <p class="text-xs text-zinc-400 mb-3">Progreso: <span
+                                        x-text="lastCourse.progress"></span>%</p>
+                                <div class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
+                                    <div class="h-full bg-brandPink rounded-full"
+                                        :style="'width: ' + lastCourse.progress + '%'"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+
+                <template x-if="!lastCourse">
+                    <div
+                        class="border border-borderDark rounded-xl p-8 flex flex-col items-center justify-center h-[250px] bg-card/20 text-center">
+                        <p class="text-zinc-500 text-sm mb-4">Aún no has iniciado ningún curso.</p>
+                        <a href="tienda.html" class="text-brandPink text-xs font-bold hover:underline">Explorar cursos
+                            &rarr;</a>
+                    </div>
+                </template>
+            </div>
+
+            <div class="flex justify-center gap-16 border-b border-transparent pb-4">
+                <button onclick="switchTab('cursos')" id="btn-cursos"
+                    class="tab-btn flex items-center gap-2 pb-2 px-2 border-b-2 border-brandPink text-white transition-all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                    </svg>
+                    <span class="text-xs font-medium">Mis cursos</span>
+                </button>
+                <button onclick="switchTab('recursos')" id="btn-recursos"
+                    class="tab-btn flex items-center gap-2 pb-2 px-2 border-b-2 border-transparent text-zinc-500 hover:text-zinc-300 transition-all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="12" y1="18" x2="12" y2="12"></line>
+                        <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    <span class="text-xs font-medium">Mis recursos</span>
+                </button>
+                <button onclick="switchTab('configuracion')" id="btn-configuracion"
+                    class="tab-btn flex items-center gap-2 pb-2 px-2 border-b-2 border-transparent text-zinc-500 hover:text-zinc-300 transition-all">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    <span class="text-xs font-medium">Configuración</span>
+                </button>
+            </div>
+
+            <div id="view-cursos" class="tab-content active space-y-16" x-data="misCursos()" x-init="loadCursos()">
+                <div class="space-y-6" x-show="cursosComprados.length > 0">
+                    <h3 class="text-center text-sm font-semibold">Mis Cursos Comprados</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <template x-for="curso in cursosComprados" :key="curso.id">
+                            <div
+                                class="border border-borderDark rounded-2xl bg-card hover:border-zinc-600 transition-colors cursor-pointer overflow-hidden group">
+                                <div class="relative overflow-hidden h-32">
+                                    <img :src="curso.image || 'https://images.unsplash.com/photo-1579389082245-8811edd6877f?q=80&w=2070&auto=format&fit=crop'"
+                                        class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                        @error="$el.src='https://images.unsplash.com/photo-1579389082245-8811edd6877f?q=80&w=2070&auto=format&fit=crop'">
+                                </div>
+                                <div class="p-3">
+                                    <h4 class="text-xs font-semibold text-white truncate" x-text="curso.name"></h4>
+                                    <p class="text-[10px] text-zinc-400 mb-2">Progreso: <span
+                                            x-text="curso.progress || 0"></span>%</p>
+                                    <div
+                                        class="w-full h-2 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700">
+                                        <div class="h-full bg-brandPink rounded-full"
+                                            :style="'width: ' + (curso.progress || 0) + '%'"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="space-y-6 flex flex-col items-center" x-show="cursosComprados.length === 0">
+                    <p class="text-center text-zinc-400 text-sm">No has comprado cursos aún</p>
+                    <a href="tienda.html"
+                        class="px-6 py-2 bg-brandPink text-white rounded-lg text-xs font-semibold hover:bg-brandPink/90 transition-colors">
+                        Ir a la tienda
+                    </a>
+                </div>
+
+                <div class="space-y-6 flex flex-col items-center" x-show="cursosComprados.length > 0">
+                    <h3 class="text-center text-sm font-semibold">Continuar aprendiendo</h3>
+                    <div class="w-full max-w-md">
+                        <input type="text" placeholder="Buscar cursos" x-model="filtro"
+                            class="w-full bg-transparent border border-zinc-700 rounded-lg py-2 px-4 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 text-center">
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 w-full mt-4">
+                        <template x-for="curso in cursosFiltrados" :key="curso.id">
+                            <div
+                                class="aspect-video border border-borderDark rounded-xl bg-card hover:border-zinc-600 transition-colors overflow-hidden group cursor-pointer">
+                                <img :src="curso.image || 'https://images.unsplash.com/photo-1579389082245-8811edd6877f?q=80&w=2070&auto=format&fit=crop'"
+                                    class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                    @error="$el.src='https://images.unsplash.com/photo-1579389082245-8811edd6877f?q=80&w=2070&auto=format&fit=crop'">
+                            </div>
+                        </template>
+                    </div>
+                    <p x-show="cursosFiltrados.length === 0" class="text-center text-zinc-400 text-xs mt-4">No
+                        encontramos cursos con ese nombre</p>
+                </div>
+            </div>
+
+            <div id="view-recursos" class="tab-content space-y-8">
+                <div class="flex justify-center">
+                    <div class="w-full max-w-md">
+                        <input type="text" placeholder="Buscar cursos"
+                            class="w-full bg-transparent border border-zinc-700 rounded-lg py-2 px-4 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-zinc-500 text-center">
+                    </div>
+                </div>
+
+                <div class="w-full border border-borderDark rounded-xl overflow-hidden bg-transparent"
+                    x-data="resourcesData()" x-init="loadResources()">
+                    <div class="overflow-x-auto p-6">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr>
+                                    <th class="w-1/3 pl-2">Recurso</th>
+                                    <th class="text-center">Tipo</th>
+                                    <th class="text-center">Fecha</th>
+                                    <th class="text-center pr-2">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-zinc-300">
+                                <template x-for="res in resources" :key="res.id">
+                                    <tr
+                                        class="group hover:bg-white/5 transition-colors border-b border-zinc-800 last:border-0">
+                                        <td class="pl-2 py-3" x-text="res.name"></td>
+                                        <td class="text-center py-3" x-text="res.type"></td>
+                                        <td class="text-center py-3"
+                                            x-text="new Date(res.createdAt).toLocaleDateString()"></td>
+                                        <td class="text-center pr-2 py-3">
+                                            <a :href="res.url || '#'" target="_blank"
+                                                class="hover:text-brandPink flex justify-center">
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                                    stroke="currentColor" stroke-width="2">
+                                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                                    <polyline points="7 10 12 15 17 10"></polyline>
+                                                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                                                </svg>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </template>
+                                <tr x-show="resources.length === 0">
+                                    <td colspan="4" class="text-center py-8 text-zinc-500">No hay recursos disponibles.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="flex justify-center gap-2 mt-4">
+                    <button
+                        class="w-8 h-8 rounded border border-zinc-800 flex items-center justify-center text-[10px] text-zinc-500 hover:border-zinc-600 hover:text-white transition-colors">&lt;</button>
+                    <button
+                        class="w-8 h-8 rounded bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] text-white">1</button>
+                    <button
+                        class="w-8 h-8 rounded border border-zinc-800 flex items-center justify-center text-[10px] text-zinc-500 hover:border-zinc-600 hover:text-white transition-colors">2</button>
+                    <button
+                        class="w-8 h-8 rounded border border-zinc-800 flex items-center justify-center text-[10px] text-zinc-500 hover:border-zinc-600 hover:text-white transition-colors">3</button>
+                    <button
+                        class="w-8 h-8 rounded border border-zinc-800 flex items-center justify-center text-[10px] text-zinc-500 hover:border-zinc-600 hover:text-white transition-colors">&gt;</button>
+                </div>
+            </div>
+
+            <div id="view-configuracion" class="tab-content" x-data="profileData()" x-init="loadProfile()">
+
+                <div class="border border-borderDark rounded-xl p-8 bg-card/20 space-y-10">
+
+                    <div>
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="h-6 w-1 bg-brandPink rounded-full"></div>
+                            <h2 class="text-lg font-semibold text-white">Editar Perfil</h2>
+                        </div>
+
+                        <form class="space-y-6 max-w-3xl" @submit.prevent="saveProfile()">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2">
+                                    <label
+                                        class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Nombre(s)</label>
+                                    <input type="text" x-model="profile.firstName" class="shadcn-input">
+                                </div>
+                                <div class="space-y-2">
+                                    <label
+                                        class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Apellido(s)</label>
+                                    <input type="text" x-model="profile.lastName" class="shadcn-input">
+                                </div>
+                            </div>
+
+                            <div class="space-y-2">
+                                <label class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Correo
+                                    electrónico</label>
+                                <input type="email" x-model="profile.email" class="shadcn-input">
+                            </div>
+
+                            <div x-show="message" class="text-green-500 text-xs" x-text="message"></div>
+                            <div x-show="error" class="text-red-500 text-xs" x-text="error"></div>
+
+                            <div class="pt-2 flex justify-end">
+                                <button type="submit" :disabled="loading"
+                                    class="bg-brandPink hover:bg-brandPinkHover disabled:opacity-50 text-white px-6 py-2 rounded text-xs font-semibold shadow-md transition-colors flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+                                        </path>
+                                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                        <polyline points="7 3 7 8 15 8"></polyline>
+                                    </svg>
+                                    <span x-text="loading ? 'Guardando...' : 'Guardar cambios'">Guardar cambios</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="border-t border-zinc-800"></div>
+
+                    <!-- Seguridad -->
+                    <div x-data="{ showCurrent: false, showNew: false }">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="h-6 w-1 bg-brandPink rounded-full"></div>
+                            <h2 class="text-lg font-semibold text-white">Seguridad</h2>
+                        </div>
+
+                        <form class="space-y-6 max-w-3xl" @submit.prevent="updatePassword()">
+                            <div class="space-y-2 relative">
+                                <label class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Contraseña
+                                    Actual</label>
+                                <div class="relative">
+                                    <input :type="showCurrent ? 'text' : 'password'" x-model="security.currentPassword"
+                                        class="shadcn-input pr-10">
+                                    <button type="button" @click="showCurrent = !showCurrent"
+                                        class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                                        <svg x-show="!showCurrent" width="14" height="14" viewBox="0 0 24 24"
+                                            fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                        </svg>
+                                        <svg x-show="showCurrent" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2">
+                                            <path
+                                                d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                                            </path>
+                                            <line x1="1" y1="1" x2="23" y2="23"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-2 relative">
+                                    <label class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Nueva
+                                        Contraseña</label>
+                                    <div class="relative">
+                                        <input :type="showNew ? 'text' : 'password'" x-model="security.newPassword"
+                                            class="shadcn-input pr-10">
+                                        <button type="button" @click="showNew = !showNew"
+                                            class="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                                            <svg x-show="!showNew" width="14" height="14" viewBox="0 0 24 24"
+                                                fill="none" stroke="currentColor" stroke-width="2">
+                                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                                <circle cx="12" cy="12" r="3"></circle>
+                                            </svg>
+                                            <svg x-show="showNew" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                                                stroke="currentColor" stroke-width="2">
+                                                <path
+                                                    d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                                                </path>
+                                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-2">
+                                    <label
+                                        class="text-[10px] uppercase tracking-wider text-zinc-500 font-medium">Confirmar
+                                        Contraseña</label>
+                                    <input type="password" x-model="security.confirmPassword" class="shadcn-input">
+                                </div>
+                            </div>
+
+                            <div x-show="secMessage" class="text-green-500 text-xs" x-text="secMessage"></div>
+                            <div x-show="secError" class="text-red-500 text-xs" x-text="secError"></div>
+
+                            <div class="pt-2 flex justify-end">
+                                <button type="submit" :disabled="secLoading"
+                                    class="bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 text-white px-6 py-2 rounded text-xs font-semibold shadow transition-colors flex items-center gap-2">
+                                    <span x-text="secLoading ? 'Actualizando...' : 'Actualizar contraseña'">Actualizar
+                                        contraseña</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="border-t border-zinc-800"></div>
+
+                    <div>
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="h-6 w-1 bg-brandPink rounded-full"></div>
+                            <h2 class="text-lg font-semibold text-white">Mis Órdenes</h2>
+                        </div>
+
+                        <div x-data="ordersData()" x-init="loadOrders()" class="space-y-4 relative">
+                            <!-- Custom Centered Modal -->
+                            <div x-show="showDeleteModal" style="display: none;"
+                                class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                                x-transition.opacity>
+                                <div class="bg-[#121212] border border-zinc-800 rounded-xl max-w-sm w-full p-6 shadow-2xl relative"
+                                    @click.outside="showDeleteModal = false"
+                                    x-transition:enter="transition ease-out duration-300"
+                                    x-transition:enter-start="opacity-0 scale-95"
+                                    x-transition:enter-end="opacity-100 scale-100">
+                                    <h3 class="text-lg font-bold text-white mb-2">¿Eliminar orden?</h3>
+                                    <p class="text-zinc-400 text-sm mb-6">Esta acción borrará la orden de tu historial.
+                                        No se puede deshacer.</p>
+                                    <div class="flex justify-end gap-3">
+                                        <button @click="showDeleteModal = false"
+                                            class="px-4 py-2 rounded-lg text-xs font-medium text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors">
+                                            Cancelar
+                                        </button>
+                                        <button @click="confirmDelete()"
+                                            class="px-4 py-2 rounded-lg text-xs font-medium text-white bg-red-600 hover:bg-red-700 shadow-lg shadow-red-900/20 transition-colors">
+                                            Sí, eliminar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <template x-for="order in orders" :key="order.id">
+                                <div class="border border-borderDark rounded-lg p-4 hover:bg-white/5 transition-colors">
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h4 class="text-sm font-medium text-white" x-text="'Orden #' + order.id"></h4>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-xs px-2 py-1 rounded"
+                                                :class="(order.status === 'PAID' || order.status === 'paid') ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'"
+                                                x-text="order.status">
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="text-[10px] text-zinc-500 mb-2"
+                                        x-text="'Total: $' + parseFloat(order.total || order.totalAmount || 0).toFixed(2)">
+                                    </p>
+                                    <template x-for="item in order.items" :key="item.id">
+                                        <p class="text-[10px] text-zinc-400"
+                                            x-text="(item.id === 'membership-annual' ? 'Membresía Anual' : 'Curso ID: ' + item.id) + ' x' + (item.quantity || item.qty)">
+                                        </p>
+                                    </template>
+
+                                    <!-- Actions -->
+                                    <div class="flex gap-2 mt-3 pt-3 border-t border-zinc-800">
+                                        <button @click="deleteOrder(order.id)"
+                                            class="text-[10px] text-red-500 hover:text-red-400 font-medium border border-red-500/30 px-3 py-1 rounded hover:bg-red-500/10 transition-colors">
+                                            Borrar historial
+                                        </button>
+                                        <template x-if="order.status !== 'PAID' && order.status !== 'paid'">
+                                            <button @click="continueOrder(order)"
+                                                class="text-[10px] text-brandPink hover:text-brandPinkHover font-medium border border-brandPink/30 px-3 py-1 rounded hover:bg-brandPink/10 transition-colors">
+                                                Continuar compra
+                                            </button>
+                                        </template>
+                                    </div>
+                                </div>
+                            </template>
+
+                            <div x-show="orders.length === 0" class="text-center py-8">
+                                <p class="text-zinc-400 text-sm">No hay órdenes registradas</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="border-t border-zinc-800"></div>
+
+                    <div class="flex justify-end">
+                        <button @click="logout()"
+                            class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded text-xs font-semibold shadow-md transition-colors">
+                            Cerrar sesión
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="./api.js"></script>
+    <script>
+        // Redirigir a login si no está autenticado
+        if (!(window.API && window.API.isLoggedIn ? window.API.isLoggedIn() : false)) {
+            window.location.href = 'login.html';
+        }
+
+        window.profileData = function () {
+            return {
+                profile: { firstName: '', lastName: '', email: '' },
+                security: { currentPassword: '', newPassword: '', confirmPassword: '' },
+                loading: false,
+                message: '',
+                error: '',
+                secLoading: false,
+                secMessage: '',
+                secError: '',
+                message: '',
+                error: '',
+                async loadProfile() {
+                    try {
+                        const data = await window.API.apiGetProfile();
+                        this.profile = data;
+                    } catch (err) {
+                        this.error = err.message;
+                    }
+                },
+                async saveProfile() {
+                    try {
+                        this.error = '';
+                        this.message = '';
+                        this.loading = true;
+                        await window.API.apiUpdateProfile(this.profile.firstName, this.profile.lastName, this.profile.email);
+                        this.message = '¡Perfil actualizado correctamente!';
+                        setTimeout(() => this.message = '', 3000);
+                    } catch (err) {
+                        this.error = err.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+                async updatePassword() {
+                    this.secError = '';
+                    this.secMessage = '';
+                    if (this.security.newPassword !== this.security.confirmPassword) {
+                        this.secError = 'Las contraseñas no coinciden';
+                        return;
+                    }
+                    if (this.security.newPassword.length < 6) {
+                        this.secError = 'La nueva contraseña debe tener al menos 6 caracteres';
+                        return;
+                    }
+
+                    this.secLoading = true;
+                    try {
+                        await window.API.apiUpdatePassword(this.security.currentPassword, this.security.newPassword);
+                        this.secMessage = 'Contraseña actualizada correctamente';
+                        this.security.currentPassword = '';
+                        this.security.newPassword = '';
+                        this.security.confirmPassword = '';
+                        setTimeout(() => this.secMessage = '', 3000);
+                    } catch (err) {
+                        this.secError = err.message || 'Error al actualizar contraseña';
+                    } finally {
+                        this.secLoading = false;
+                    }
+                }
+            }
+        }
+
+        window.ordersData = function () {
+            return {
+                orders: [],
+                showDeleteModal: false,
+                orderIdToDelete: null,
+                async loadOrders() {
+                    try {
+                        const data = await window.API.apiGetOrders();
+                        this.orders = Array.isArray(data) ? data : data.data || [];
+                    } catch (err) {
+                        console.error('Error loading orders:', err);
+                    }
+                },
+                deleteOrder(id) {
+                    this.orderIdToDelete = id;
+                    this.showDeleteModal = true;
+                },
+                async confirmDelete() {
+                    if (!this.orderIdToDelete) return;
+                    try {
+                        await window.API.apiDeleteOrder(this.orderIdToDelete);
+                        await this.loadOrders();
+                    } catch (e) {
+                        alert(e.message);
+                    } finally {
+                        this.showDeleteModal = false;
+                        this.orderIdToDelete = null;
+                    }
+                },
+                async continueOrder(order) {
+                    try {
+                        const btn = event.target;
+                        const originalText = btn.innerText;
+                        btn.innerText = 'Procesando...';
+                        btn.disabled = true;
+
+                        // Ensure items structure
+                        const items = order.items.map(i => ({ id: i.id || i.productId, qty: i.quantity || i.qty || 1 }));
+
+                        const response = await window.API.apiCreateCheckoutSession(items, null);
+                        if (response.url) {
+                            window.location.href = response.url;
+                        } else {
+                            throw new Error('No se recibió URL de pago');
+                        }
+                    } catch (e) {
+                        alert('Error: ' + e.message);
+                        // Reload to reset button state easily
+                        window.location.reload();
+                    }
+                }
+            }
+        }
+
+        // Handle Deep Links
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const tab = params.get('tab');
+            if (tab && ['cursos', 'recursos', 'configuracion'].includes(tab)) {
+                switchTab(tab);
+            }
+        });
+
+        window.misCursos = function () {
+            return {
+                cursosComprados: [],
+                filtro: '',
+                get cursosFiltrados() {
+                    if (!this.filtro) return this.cursosComprados;
+                    return this.cursosComprados.filter(c => c.name.toLowerCase().includes(this.filtro.toLowerCase()));
+                },
+                async loadCursos() {
+                    try {
+                        const api = window.API;
+
+                        // Obtener cursos comprados del usuario actual
+                        const purchasedData = await api.apiGetMyPurchasedCourses();
+
+                        this.cursosComprados = purchasedData.courses.map(course => ({
+                            id: course.id,
+                            name: course.name,
+                            image: course.image || 'https://images.unsplash.com/photo-1579389082245-8811edd6877f?q=80&w=2070&auto=format&fit=crop',
+                            progress: course.progress || 0,
+                            description: course.description || ''
+                        }));
+                    } catch (err) {
+                        console.error('Error loading cursos:', err);
+                        this.cursosComprados = [];
+                    }
+                }
+            }
+        }
+
+        window.logout = function () {
+            if (window.API && window.API.apiLogout) window.API.apiLogout();
+            window.location.href = 'index.html';
+        }
+
+        // New Components
+        window.dashboardData = function () {
+            return {
+                stats: { completed: 0, totalHours: 0 },
+                lastCourse: null,
+                fullName: 'Usuario',
+                initials: 'U',
+                async loadStats() {
+                    try {
+                        const profile = await window.API.apiGetProfile();
+                        this.fullName = (profile.firstName + ' ' + profile.lastName).trim() || profile.email;
+                        this.initials = (profile.firstName?.[0] || '') + (profile.lastName?.[0] || '');
+                        if (!this.initials) this.initials = profile.email[0].toUpperCase();
+
+                        const data = await window.API.apiGetDashboardStats();
+                        this.stats = data.stats;
+                        this.lastCourse = data.lastCourse;
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+        }
+
+        window.resourcesData = function () {
+            return {
+                resources: [],
+                async loadResources() {
+                    try {
+                        const data = await window.API.apiGetResources();
+                        this.resources = data || [];
+                    } catch (err) {
+                        console.error(err);
+                    }
+                }
+            }
+        }
+
+        function switchTab(tabName) {
+            // 1. Ocultar todos los contenidos
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // 2. Resetear estilos de todos los botones
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-brandPink', 'text-white');
+                btn.classList.add('border-transparent', 'text-zinc-500');
+            });
+
+            // 3. Mostrar el contenido seleccionado
+            document.getElementById('view-' + tabName).classList.add('active');
+
+            // 4. Activar estilo del botón seleccionado
+            const activeBtn = document.getElementById('btn-' + tabName);
+            activeBtn.classList.remove('border-transparent', 'text-zinc-500');
+            activeBtn.classList.add('border-brandPink', 'text-white');
+        }
+    </script>
+
+</body>
+
+</html>
