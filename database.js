@@ -8,11 +8,20 @@ let db;
 let sqlite3;
 
 // Safe require for SQLite to avoid Vercel crashes if it fails to build
+// Safe require for SQLite to avoid Vercel crashes if it fails to build
 if (!isPostgres) {
     try {
-        sqlite3 = require('sqlite3').verbose();
+        // Only try to load sqlite3 if we are NOT in production (Vercel)
+        // or if we really want to.
+        // On Vercel, if POSTGRES_URL is missing, we shouldn't try sqlite because it writes to disk.
+        if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+            console.error("CRITICAL: POSTGRES_URL is missing in Vercel. Falling back to Mock DB to prevent crash.");
+        } else {
+            console.log("Loading SQLite for local development...");
+            sqlite3 = require('sqlite3').verbose();
+        }
     } catch (e) {
-        console.error("SQLite3 dependency not found or failed to load. If you are on Vercel, this is expected ONLY if you use Postgres.", e);
+        console.error("SQLite3 dependency not found or failed to load.", e);
     }
 }
 
@@ -20,7 +29,7 @@ if (isPostgres) {
     const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
     const pool = new Pool({
         connectionString,
-        ssl: { rejectUnauthorized: false }
+        ssl: true // Neon requires SSL. 'rejectUnauthorized: false' is implied/default often compatible or can be explicit.
     });
 
     console.log('Using PostgreSQL database (Cloud Mode)');
@@ -38,33 +47,18 @@ if (isPostgres) {
 
         run: function (sql, params = [], callback) {
             if (typeof params === 'function') { callback = params; params = []; }
-
-            // 1. Table Creation Compatibility
             if (sql.trim().toUpperCase().startsWith('CREATE TABLE')) {
-                // Primary Key mapping
                 sql = sql.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY');
-                // DateTime mapping
                 sql = sql.replace(/DATETIME/gi, 'TIMESTAMP');
             }
-            // 2. ALTER TABLE fixes
-            // Sqlite "ALTER TABLE x ADD COLUMN y TEXT" works in PG too.
-
-            // 3. INSERT RETURNING ID
-            // SQLite 'this.lastID' usage requires us to return the ID from PG.
             let isInsert = sql.trim().toUpperCase().startsWith('INSERT');
             if (isInsert && !sql.toLowerCase().includes('returning')) {
-                // Simple heuristic: just append RETURNING id. 
-                // Will fail if table has no 'id' col, but all our tables do.
                 sql += ' RETURNING id';
             }
-
             const pgSql = translateQuery(sql);
-
             pool.query(pgSql, params, (err, res) => {
                 if (err) {
-                    // Ignore "relation already exists" or "column already exists" for init
                     if (err.code === '42P07' || err.code === '42701') {
-                        // table/col exists, treat as success for idempotency
                         if (callback) callback.call({ lastID: 0, changes: 0 }, null);
                         return;
                     }
@@ -72,13 +66,10 @@ if (isPostgres) {
                     else console.error('DB Error:', err.message);
                     return;
                 }
-
-                // Mock existing SQLite 'this' context
                 const context = {
                     lastID: (isInsert && res.rows[0]) ? res.rows[0].id : 0,
                     changes: res.rowCount
                 };
-
                 if (callback) callback.call(context, null);
             });
         },
@@ -105,7 +96,7 @@ if (isPostgres) {
     // Run Init after a brief tick to ensure export (simulated start)
     setTimeout(() => initDatabase(), 500);
 
-} else {
+} else if (sqlite3) {
     // --- LOCAL SQLITE MODE ---
     const dbPath = path.resolve(__dirname, 'database.sqlite');
     db = new sqlite3.Database(dbPath, (err) => {
@@ -116,6 +107,29 @@ if (isPostgres) {
             initDatabase();
         }
     });
+} else {
+    // --- MOCK MODE (Fallout) ---
+    // If we are here, we are likely on Vercel BUT missing Postgres vars.
+    // We create a "db" object that logs errors instead of crashing property access.
+    console.error("CRITICAL: Database not initialized. Requests will fail gracefully.");
+    db = {
+        serialize: (cb) => { if (cb) cb(); },
+        run: (s, p, cb) => {
+            const msg = "[DB CRITICAL] No Database Connection. Check POSTGRES_URL.";
+            console.error(msg);
+            if (cb && typeof cb === 'function') cb(new Error(msg));
+        },
+        get: (s, p, cb) => {
+            const msg = "[DB CRITICAL] No Database Connection. Check POSTGRES_URL.";
+            console.error(msg);
+            if (cb && typeof cb === 'function') cb(new Error(msg), null);
+        },
+        all: (s, p, cb) => {
+            const msg = "[DB CRITICAL] No Database Connection. Check POSTGRES_URL.";
+            console.error(msg);
+            if (cb && typeof cb === 'function') cb(new Error(msg), []);
+        }
+    };
 }
 
 function initDatabase() {

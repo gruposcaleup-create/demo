@@ -722,6 +722,16 @@ app.post('/api/progress', (req, res) => {
 
 
 // Start
+
+// Global Error Handlers (Prevent Crash in Prod)
+process.on('uncaughtException', (err) => {
+    console.error('CRITICAL ERROR (Uncaught Exception):', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('CRITICAL ERROR (Unhandled Rejection):', reason);
+});
+
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Servidor corriendo en http://localhost:${PORT}`);
