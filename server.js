@@ -15,6 +15,7 @@ const app = express();
 const PORT = 3000; // Puerto del servidor
 
 app.use(cors());
+app.options('*', cors());
 
 // Webhook endpoint needs raw body, so we define it BEFORE default parsers
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req, res) => {
