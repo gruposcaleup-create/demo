@@ -1,5 +1,6 @@
 {
     "version": 2,
+    "outputDirectory": "./",
     "rewrites": [
         {
             "source": "/api/(.*)",
@@ -10,4 +11,5 @@
             "destination": "/$1"
         }
     ]
+
 }
