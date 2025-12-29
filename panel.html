@@ -739,6 +739,12 @@
                     try {
                         const api = window.API;
 
+                        // Listen for updates from dashboard verification
+                        window.addEventListener('courses-updated', () => {
+                            console.log("Reloading courses...");
+                            this.loadCursos();
+                        });
+
                         // Obtener cursos comprados del usuario actual
                         const purchasedData = await api.apiGetMyPurchasedCourses();
 
@@ -771,6 +777,37 @@
                 initials: 'U',
                 async loadStats() {
                     try {
+                        // CHECK FOR PAYMENT SUCCESS
+                        const params = new URLSearchParams(window.location.search);
+                        if (params.get('payment_success') === 'true' && params.get('session_id')) {
+                            const sessionId = params.get('session_id');
+                            console.log("Verifying payment session:", sessionId);
+
+                            // Call Verify Endpoint
+                            try {
+                                const verifyRes = await fetch('/api/checkout/verify-session', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ sessionId })
+                                });
+                                const verifyData = await verifyRes.json();
+                                console.log("Verification result:", verifyData);
+
+                                // Authenticated User? If so, we are good.
+                                // Clean URL
+                                window.history.replaceState({}, document.title, "panel.html?tab=cursos");
+
+                                // FORCE RELOAD COURSES if we are in that view
+                                if (window.misCursos) {
+                                    // This might run before misCursos init, so we rely on page reload or re-fetch
+                                    // Simple approach: Set a flag or alert
+                                    // Better: Just continue, the loadCursos() will run next or we trigger it.
+                                }
+                            } catch (e) {
+                                console.error("Verification failed", e);
+                            }
+                        }
+
                         const profile = await window.API.apiGetProfile();
                         this.fullName = (profile.firstName + ' ' + profile.lastName).trim() || profile.email;
                         this.initials = (profile.firstName?.[0] || '') + (profile.lastName?.[0] || '');
@@ -779,6 +816,11 @@
                         const data = await window.API.apiGetDashboardStats();
                         this.stats = data.stats;
                         this.lastCourse = data.lastCourse;
+
+                        // Force refresh of courses list if we just verified
+                        const event = new CustomEvent('courses-updated');
+                        window.dispatchEvent(event);
+
                     } catch (err) {
                         console.error(err);
                     }

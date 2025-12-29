@@ -428,6 +428,70 @@ app.post('/api/checkout/session', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// 6.5 Verify Session & Force Enrollment (Fallback)
+app.post('/api/checkout/verify-session', async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        if (!sessionId) return res.status(400).json({ error: 'Session ID required' });
+
+        // Retrieve session from Stripe
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        if (!session) return res.status(404).json({ error: 'Session not found' });
+
+        if (session.payment_status === 'paid') {
+            const orderId = session.metadata.orderId; // e.g. "order_123"
+            const userId = session.metadata.userId;
+            const dbId = orderId.replace('order_', '');
+
+            console.log(`[Verify] Verifying order ${dbId} for user ${userId}`);
+
+            // Update Status Forcefully
+            db.run(`UPDATE orders SET status = 'paid' WHERE id = ?`, [dbId], (err) => {
+                if (err) console.error("[Verify] Error updating order", err);
+
+                // Enroll Logic (Idempotent)
+                db.get(`SELECT items FROM orders WHERE id = ?`, [dbId], (err, row) => {
+                    if (!err && row && row.items) {
+                        try {
+                            const items = JSON.parse(row.items);
+                            items.forEach(item => {
+                                if (item.id === 'membership-annual') {
+                                    // Handle membership
+                                } else {
+                                    const courseId = item.id;
+                                    // Check existence
+                                    db.get(`SELECT id FROM enrollments WHERE userId = ? AND courseId = ?`, [userId, courseId], (e, r) => {
+                                        if (!r) {
+                                            db.run(`INSERT INTO enrollments (userId, courseId, progress, totalHoursSpent) VALUES (?, ?, 0, 0)`,
+                                                [userId, courseId],
+                                                (errEnroll) => {
+                                                    if (errEnroll) console.error("[Verify] Enrollment failed", errEnroll);
+                                                    else console.log(`[Verify] Enrolled user ${userId} in course ${courseId}`);
+                                                }
+                                            );
+                                        } else {
+                                            console.log(`[Verify] User ${userId} already enrolled in ${courseId}`);
+                                        }
+                                    });
+                                }
+                            });
+                        } catch (e) {
+                            console.error("[Verify] Item parse error", e);
+                        }
+                    }
+                });
+            });
+
+            return res.json({ success: true, status: 'paid' });
+        } else {
+            return res.json({ success: false, status: session.payment_status });
+        }
+    } catch (err) {
+        console.error("Verify Error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
 // Legacy simple order creation kept for non-stripe tests if needed, but endpoint overwrites are tricky.
 // Let's modify the old api/orders to be just for admin manual usage or manual confirmation if needed, 
 // OR just leave it as is if it doesn't conflict. 

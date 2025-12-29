@@ -1,4 +1,3 @@
-const sqlite3 = require('sqlite3').verbose();
 const { Pool } = require('pg');
 const path = require('path');
 require('dotenv').config();
@@ -6,6 +5,16 @@ require('dotenv').config();
 // Detect environment
 const isPostgres = !!(process.env.POSTGRES_URL || process.env.DATABASE_URL);
 let db;
+let sqlite3;
+
+// Safe require for SQLite to avoid Vercel crashes if it fails to build
+if (!isPostgres) {
+    try {
+        sqlite3 = require('sqlite3').verbose();
+    } catch (e) {
+        console.error("SQLite3 dependency not found or failed to load. If you are on Vercel, this is expected ONLY if you use Postgres.", e);
+    }
+}
 
 if (isPostgres) {
     const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
