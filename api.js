@@ -1,6 +1,8 @@
 // API client connecting to Node.js backend
 (function () {
-  const BASE_URL = 'http://localhost:3000/api';
+  // Use relative URL for production compatibility (Vercel)
+  // If running via file:// or different port, this needs adjustment, but for Vercel/Same-Origin it's perfect.
+  const BASE_URL = '/api';
 
   // Helper for requests
   async function request(endpoint, options = {}) {

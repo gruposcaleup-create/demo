@@ -220,9 +220,10 @@ app.get('/api/admin/courses', (req, res) => {
 app.post('/api/courses', (req, res) => {
     const { title, desc, price, priceOffer, image, videoPromo, category, modules } = req.body;
     const modulesStr = JSON.stringify(modules || []);
+    const modulesCount = modules ? modules.length : 0;
 
-    db.run(`INSERT INTO courses (title, desc, price, priceOffer, image, videoPromo, category, modulesData) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [title, desc, price, priceOffer, image, videoPromo, category, modulesStr],
+    db.run(`INSERT INTO courses (title, desc, price, priceOffer, image, videoPromo, category, modulesData, modulesCount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [title, desc, price, priceOffer, image, videoPromo, category, modulesStr, modulesCount],
         function (err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ id: this.lastID, ...req.body });
@@ -238,6 +239,7 @@ app.put('/api/courses/:id', (req, res) => {
     // Construir query dinámico o update masivo
     // Simplificamos actualizando todo lo enviado.
     const modulesStr = modules ? JSON.stringify(modules) : null;
+    const modulesCount = modules ? modules.length : null;
 
     db.run(`UPDATE courses SET 
             title = COALESCE(?, title), 
@@ -247,9 +249,10 @@ app.put('/api/courses/:id', (req, res) => {
             videoPromo = COALESCE(?, videoPromo), 
             category = COALESCE(?, category),
             modulesData = COALESCE(?, modulesData),
+            modulesCount = COALESCE(?, modulesCount),
             status = COALESCE(?, status)
             WHERE id = ?`,
-        [title, desc, price, priceOffer, videoPromo, category, modulesStr, status, id],
+        [title, desc, price, priceOffer, videoPromo, category, modulesStr, modulesCount, status, id],
         function (err) {
             if (err) return res.status(500).json({ error: err.message });
             res.json({ message: 'Curso actualizado' });
