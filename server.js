@@ -31,14 +31,50 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req,
     if (event.type === 'checkout.session.completed') {
         const session = event.data.object;
         const orderId = session.metadata.orderId;
+        const userId = session.metadata.userId;
         console.log(`Pago confirmado para orden ${orderId}`);
 
         // Update order status in DB
         if (orderId) {
-            // Assuming orderId is "order_ID" -> extract ID
             const dbId = orderId.replace('order_', '');
+
+            // 1. Mark Order as Paid
             db.run(`UPDATE orders SET status = 'paid' WHERE id = ?`, [dbId], (err) => {
                 if (err) console.error("Error updating order status", err);
+                else {
+                    // 2. Retrieve Order Items to Enroll User
+                    db.get(`SELECT items FROM orders WHERE id = ?`, [dbId], (err, row) => {
+                        if (!err && row && row.items) {
+                            try {
+                                const items = JSON.parse(row.items);
+                                items.forEach(item => {
+                                    // Handle 'membership-annual' or specific courses
+                                    if (item.id === 'membership-annual') {
+                                        console.log(`[Enrollment] User ${userId} bought Annual Membership. TODO: Handle logic.`);
+                                        // Optional: Activate all courses or set a special flag
+                                    } else {
+                                        // Enroll in specific course
+                                        const courseId = item.id;
+                                        // Check if already enrolled
+                                        db.get(`SELECT id FROM enrollments WHERE userId = ? AND courseId = ?`, [userId, courseId], (e, r) => {
+                                            if (!r) {
+                                                db.run(`INSERT INTO enrollments (userId, courseId, progress, totalHoursSpent) VALUES (?, ?, 0, 0)`,
+                                                    [userId, courseId],
+                                                    (errEnroll) => {
+                                                        if (errEnroll) console.error(`[Enrollment] Failed for user ${userId} course ${courseId}`, errEnroll);
+                                                        else console.log(`[Enrollment] Success for user ${userId} course ${courseId}`);
+                                                    }
+                                                );
+                                            }
+                                        });
+                                    }
+                                });
+                            } catch (parseErr) {
+                                console.error("[Enrollment] Error parsing order items", parseErr);
+                            }
+                        }
+                    });
+                }
             });
         }
     }
@@ -53,6 +89,14 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '.')));
 
 // --- RUTAS DE API ---
+
+// 0. HEALTH CHECK (DB Connection)
+app.get('/api/db-check', (req, res) => {
+    db.get('SELECT 1', [], (err, row) => {
+        if (err) return res.status(500).json({ status: 'error', message: err.message });
+        res.json({ status: 'ok', database: 'connected' });
+    });
+});
 
 // 1. Auth: Registro
 app.post('/api/auth/register', (req, res) => {
@@ -431,14 +475,7 @@ app.post('/api/coupons/validate', (req, res) => {
         res.json({ valid: true, code: row.code, discount: row.discount });
     });
 });
-app.post('/api/coupons/validate', (req, res) => {
-    const { code } = req.body;
-    db.get("SELECT * FROM coupons WHERE code = ? AND status = 'active'", [code], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ valid: false, message: 'Cupón no válido' });
-        res.json({ valid: true, code: row.code, discount: row.discount });
-    });
-});
+
 
 // 8. Recursos
 app.get('/api/resources', (req, res) => {
@@ -617,6 +654,11 @@ app.post('/api/progress', (req, res) => {
 
 
 // Start
-app.listen(PORT, () => {
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    });
+}
+
+// Export app for Vercel
+module.exports = app;
