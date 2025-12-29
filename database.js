@@ -257,4 +257,7 @@ function initDatabase() {
     });
 }
 
+
+db.init = initDatabase;
+
 module.exports = db;

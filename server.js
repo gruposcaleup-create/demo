@@ -17,6 +17,11 @@ const PORT = 3000; // Puerto del servidor
 app.use(cors());
 app.options('*', cors());
 
+// Health Check (No DB) - Proves server is running
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', server: 'running', env: process.env.NODE_ENV });
+});
+
 // Webhook endpoint needs raw body, so we define it BEFORE default parsers
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req, res) => {
     const sig = req.headers['stripe-signature'];
