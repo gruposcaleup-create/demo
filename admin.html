@@ -1010,7 +1010,8 @@
                     <td class="p-4 text-center font-bold text-slate-700">${m.courses ? m.courses.length : 0}</td>
                     <td class="p-4 font-mono text-green-600">$${(m.spent || 0).toFixed(2)}</td>
                     <td class="p-4 text-right">
-                         <button onclick="toggleUserStatus('${m.email}', '${m.status}')" class="text-slate-400 hover:text-slate-600 p-2"><i data-lucide="user-cog" class="w-4 h-4"></i></button>
+                         <button onclick="toggleUserStatus('${m.email}', '${m.status}')" class="text-slate-400 hover:text-slate-600 p-2" title="Bloquear/Desbloquear"><i data-lucide="user-cog" class="w-4 h-4"></i></button>
+                         <button onclick="assignMembership('${m.id}')" class="text-yellow-600 hover:text-yellow-800 p-2" title="Asignar Membresía Anual"><i data-lucide="crown" class="w-4 h-4"></i></button>
                     </td>
                 </tr>
             `).join('');
@@ -1025,6 +1026,14 @@
                     renderMembers();
                     showToast(`Usuario ${newStatus}`);
                 } catch (e) { showToast('Error actualizando usuario', 'error'); }
+            }
+        }
+        async function assignMembership(userId) {
+            if (confirm('¿Asignar Membresía Anual (Todo Incluido) a este usuario?')) {
+                try {
+                    await window.API.apiAssignMembership(userId);
+                    showToast('Membresía asignada correctamente', 'success');
+                } catch (e) { showToast('Error: ' + e.message, 'error'); }
             }
         }
         function filterMembers(val) {

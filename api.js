@@ -407,7 +407,10 @@ if (typeof window !== 'undefined') {
       apiGetMyPurchasedCourses,
       apiGetDashboardStats,
       apiUpdateProgress,
-      apiCreateCheckoutSession
+      apiCreateCheckoutSession,
+      apiAssignMembership: async function (userId) {
+        return await request(`/admin/users/${userId}/membership`, { method: 'POST' });
+      }
     };
   })();
 } else {

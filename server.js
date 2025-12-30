@@ -16,17 +16,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 // Mail Transporter
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: process.env.SMTP_PORT || 587,
+    host: process.env.MAIL_HOST || 'smtp.gmail.com',
+    port: 587, // Standard
     secure: false, // true for 465, false for other ports
     auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+        user: process.env.MAIL_USER,
+        pass: process.env.MAIL_PASSWORD || process.env.MAIL_PASS // Support both just in case
     }
 });
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Puerto del servidor (Render injects PORT)
+const APP_URL = process.env.APP_URL || process.env.CLIENT_URL || 'http://localhost:3000'; // Fallback order
 
 app.use(cors());
 // app.options removed for Express 5 compatibility (cors middleware handles it)
@@ -206,10 +207,10 @@ app.post('/api/auth/recover', (req, res) => {
             if (err2) console.error("Error saving reset code", err2);
 
             // Send Email
-            if (process.env.SMTP_USER) {
+            if (process.env.MAIL_USER) {
                 try {
                     transporter.sendMail({
-                        from: '"Soporte" <' + process.env.SMTP_USER + '>',
+                        from: '"Soporte" <' + process.env.MAIL_USER + '>',
                         to: email,
                         subject: 'Recuperación de Contraseña',
                         text: `Tu código de recuperación es: ${code}`,
@@ -489,8 +490,8 @@ app.post('/api/checkout/session', async (req, res) => {
                 payment_method_types: ['card'],
                 line_items: cleanStripeItems,
                 mode: 'payment',
-                success_url: `${process.env.CLIENT_URL}/panel.html?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.CLIENT_URL}/cart.html?canceled=true`,
+                success_url: `${APP_URL}/panel.html?payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${APP_URL}/cart.html?canceled=true`,
                 metadata: {
                     orderId: dbOrderId,
                     userId: userId ? userId.toString() : 'guest',
@@ -694,6 +695,23 @@ app.put('/api/users/:email/status', (req, res) => {
     db.run(`UPDATE users SET status = ? WHERE email = ?`, [status, req.params.email], (err) => res.json({ success: true }));
 });
 
+// 10. Admin: Assign Membership Manually
+app.post('/api/admin/users/:userId/membership', (req, res) => {
+    const { userId } = req.params;
+    // Activate for 1 year
+    const startDate = new Date().toISOString();
+    const endDate = new Date();
+    endDate.setFullYear(endDate.getFullYear() + 1);
+
+    db.run(`INSERT INTO memberships (userId, status, startDate, endDate, paymentId) VALUES (?, ?, ?, ?, ?)`,
+        [userId, 'active', startDate, endDate.toISOString(), 'manual_admin'],
+        function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+            res.json({ success: true, message: 'Membresía asignada manualmente' });
+        }
+    );
+});
+
 // 10. Dashboard & My Courses
 app.get('/api/my-courses', (req, res) => {
     const userId = req.query.userId;
@@ -809,9 +827,9 @@ process.on('unhandledRejection', (reason, promise) => {
 
 if (require.main === module) {
     app.listen(PORT, () => {
-        console.log(`Servidor corriendo en http://localhost:${PORT}`);
+        console.log(`Server running on port ${PORT}`);
+        console.log(`App URL: ${APP_URL}`);
     });
 }
 
-// Export app for Vercel
 module.exports = app;
