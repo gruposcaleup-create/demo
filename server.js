@@ -9,10 +9,15 @@ const Stripe = require('stripe');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    maxNetworkRetries: 2,
-    timeout: 10000,
-});
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+    stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+        maxNetworkRetries: 2,
+        timeout: 10000,
+    });
+} else {
+    console.warn("⚠️ STRIPE_SECRET_KEY missing. Payments will be disabled.");
+}
 
 // Mail Transporter
 const transporter = nodemailer.createTransport({
@@ -39,6 +44,7 @@ app.get('/api/health', (req, res) => {
 
 // Webhook endpoint needs raw body, so we define it BEFORE default parsers
 app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req, res) => {
+    if (!stripe) return res.status(503).send('Stripe not configured');
     const sig = req.headers['stripe-signature'];
     let event;
     try {
@@ -365,6 +371,8 @@ app.delete('/api/categories/:name', (req, res) => { res.json({ success: true });
 
 // 6. Ordenes & Stripe Checkout
 app.post('/api/checkout/session', async (req, res) => {
+    if (!stripe) return res.status(503).json({ error: 'Pagos deshabilitados por falta de configuración (Stripe Key missing)' });
+
     try {
         const { items, userId, couponCode } = req.body; // items: [{ id: productId, qty: 1 }]
 
