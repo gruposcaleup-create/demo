@@ -1,136 +1,23 @@
-const { Pool } = require('pg');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 require('dotenv').config();
 
-// Detect environment
-const isPostgres = !!(process.env.POSTGRES_URL || process.env.DATABASE_URL);
-let db;
-let sqlite3;
+// --- SQLITE MODE FORCED ---
+// We use a persistent file path.
+// Note: On Render Web Services without a Disk, this file is ephemeral (resets on deploy/restart).
+// Use Render Disks for persistence if needed, but per request we use a local file.
+const dbPath = path.resolve(__dirname, 'tienda.db'); // Changed to tienda.db to ensure consistency if it existed before
 
-// Safe require for SQLite to avoid Vercel crashes if it fails to build
-// Safe require for SQLite to avoid Vercel crashes if it fails to build
-if (!isPostgres) {
-    try {
-        // Only try to load sqlite3 if we are NOT in production (Vercel)
-        // or if we really want to.
-        // On Vercel, if POSTGRES_URL is missing, we shouldn't try sqlite because it writes to disk.
-        if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-            console.error("CRITICAL: POSTGRES_URL is missing in Vercel. Falling back to Mock DB to prevent crash.");
-        } else {
-            console.log("Loading SQLite for local development...");
-            sqlite3 = require('sqlite3').verbose();
-        }
-    } catch (e) {
-        console.error("SQLite3 dependency not found or failed to load.", e);
+console.log(`Connecting to SQLite at ${dbPath}`);
+
+const db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+        console.error('CRITICAL: Error connecting to SQLite:', err.message);
+    } else {
+        console.log('Connected to SQLite');
+        initDatabase();
     }
-}
-
-if (isPostgres) {
-    const connectionString = process.env.POSTGRES_URL || process.env.DATABASE_URL;
-    const pool = new Pool({
-        connectionString,
-        ssl: true // Neon requires SSL. 'rejectUnauthorized: false' is implied/default often compatible or can be explicit.
-    });
-
-    console.log('Using PostgreSQL database (Cloud Mode)');
-
-    // Helper: Translate SQLite '?' -> Postgres '$1', '$2', etc.
-    const translateQuery = (sql) => {
-        let i = 1;
-        return sql.replace(/\?/g, () => `$${i++}`);
-    };
-
-    // Adapter Object
-    db = {
-        pool, // expose for direct access if needed
-        serialize: (cb) => cb(), // PG is async, invoke immediately
-
-        run: function (sql, params = [], callback) {
-            if (typeof params === 'function') { callback = params; params = []; }
-            if (sql.trim().toUpperCase().startsWith('CREATE TABLE')) {
-                sql = sql.replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY');
-                sql = sql.replace(/DATETIME/gi, 'TIMESTAMP');
-            }
-            let isInsert = sql.trim().toUpperCase().startsWith('INSERT');
-            if (isInsert && !sql.toLowerCase().includes('returning')) {
-                sql += ' RETURNING id';
-            }
-            const pgSql = translateQuery(sql);
-            pool.query(pgSql, params, (err, res) => {
-                if (err) {
-                    if (err.code === '42P07' || err.code === '42701') {
-                        if (callback) callback.call({ lastID: 0, changes: 0 }, null);
-                        return;
-                    }
-                    if (callback) callback(err);
-                    else console.error('DB Error:', err.message);
-                    return;
-                }
-                const context = {
-                    lastID: (isInsert && res.rows[0]) ? res.rows[0].id : 0,
-                    changes: res.rowCount
-                };
-                if (callback) callback.call(context, null);
-            });
-        },
-
-        get: function (sql, params = [], callback) {
-            if (typeof params === 'function') { callback = params; params = []; }
-            const pgSql = translateQuery(sql);
-            pool.query(pgSql, params, (err, res) => {
-                if (err) return callback(err);
-                callback(null, res.rows[0]);
-            });
-        },
-
-        all: function (sql, params = [], callback) {
-            if (typeof params === 'function') { callback = params; params = []; }
-            const pgSql = translateQuery(sql);
-            pool.query(pgSql, params, (err, res) => {
-                if (err) return callback(err);
-                callback(null, res.rows);
-            });
-        }
-    };
-
-    // Run Init after a brief tick to ensure export (simulated start)
-    setTimeout(() => initDatabase(), 500);
-
-} else if (sqlite3) {
-    // --- LOCAL SQLITE MODE ---
-    const dbPath = path.resolve(__dirname, 'database.sqlite');
-    db = new sqlite3.Database(dbPath, (err) => {
-        if (err) {
-            console.error('Error connecting to SQLite:', err.message);
-        } else {
-            console.log('Connected to SQLite (Local Mode)');
-            initDatabase();
-        }
-    });
-} else {
-    // --- MOCK MODE (Fallout) ---
-    // If we are here, we are likely on Vercel BUT missing Postgres vars.
-    // We create a "db" object that logs errors instead of crashing property access.
-    console.error("CRITICAL: Database not initialized. Requests will fail gracefully.");
-    db = {
-        serialize: (cb) => { if (cb) cb(); },
-        run: (s, p, cb) => {
-            const msg = "[DB CRITICAL] No Database Connection. Check POSTGRES_URL.";
-            console.error(msg);
-            if (cb && typeof cb === 'function') cb(new Error(msg));
-        },
-        get: (s, p, cb) => {
-            const msg = "[DB CRITICAL] No Database Connection. Check POSTGRES_URL.";
-            console.error(msg);
-            if (cb && typeof cb === 'function') cb(new Error(msg), null);
-        },
-        all: (s, p, cb) => {
-            const msg = "[DB CRITICAL] No Database Connection. Check POSTGRES_URL.";
-            console.error(msg);
-            if (cb && typeof cb === 'function') cb(new Error(msg), []);
-        }
-    };
-}
+});
 
 function initDatabase() {
     db.serialize(() => {
@@ -161,7 +48,6 @@ function initDatabase() {
             modulesData TEXT,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )`, (err) => {
-            // If failed, maybe it exists? Try ALTER just in case if using sqlite (PG create handled above)
             if (err) console.error("Init Courses:", err.message);
         });
 
@@ -211,14 +97,12 @@ function initDatabase() {
             lastAccess DATETIME DEFAULT CURRENT_TIMESTAMP,
             totalHoursSpent REAL DEFAULT 0,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
-            -- FOREIGN KEYS removed for simple compatibility if needed, but keeping logic
         )`);
 
         // --- Seed Data ---
 
         // Settings Seed
         db.get("SELECT value FROM settings WHERE key = 'membership_price'", [], (err, row) => {
-            // Ignore errors (table might just have been created)
             if (!row) {
                 db.run(`INSERT INTO settings (key, value) VALUES (?, ?)`, ['membership_price', '999']);
                 db.run(`INSERT INTO settings (key, value) VALUES (?, ?)`, ['membership_price_offer', '']);
@@ -239,7 +123,7 @@ function initDatabase() {
 
         // Sample Courses
         db.get("SELECT COUNT(*) as count FROM courses", [], (err, row) => {
-            if (row && row.count == 0) { // weak equality for string '0' from PG
+            if (row && row.count == 0) {
                 const sampleModules = JSON.stringify([
                     { id: 1, title: 'Introducción', lessons: [{ id: 1, title: 'Bienvenida', url: 'https://www.youtube.com/watch?v=xyz' }] }
                 ]);
@@ -256,7 +140,6 @@ function initDatabase() {
 
     });
 }
-
 
 db.init = initDatabase;
 
