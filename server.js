@@ -12,10 +12,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 });
 
 const app = express();
-const PORT = 3000; // Puerto del servidor
+const PORT = process.env.PORT || 3000; // Puerto del servidor (Render injects PORT)
 
 app.use(cors());
-app.options('*', cors());
+// app.options removed for Express 5 compatibility (cors middleware handles it)
 
 // Health Check (No DB) - Proves server is running
 app.get('/api/health', (req, res) => {
