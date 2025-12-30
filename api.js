@@ -410,4 +410,15 @@ if (typeof window !== 'undefined') {
       apiCreateCheckoutSession
     };
   })();
+} else {
+  // Node.js Execution - Server Side
+  // Import the Express app from server.js
+  const app = require('./server');
+  const PORT = process.env.PORT || 3000;
+
+  // Start Server
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Render Service Ready`);
+  });
 }
