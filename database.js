@@ -88,7 +88,7 @@ function initDatabase() {
             value TEXT
         )`);
 
-        // Enrollments
+        // Enrollments (Progress & Access)
         db.run(`CREATE TABLE IF NOT EXISTS enrollments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             userId INTEGER,
@@ -96,6 +96,29 @@ function initDatabase() {
             progress REAL DEFAULT 0,
             lastAccess DATETIME DEFAULT CURRENT_TIMESTAMP,
             totalHoursSpent REAL DEFAULT 0,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+            -- FOREIGN KEY (userId) REFERENCES users(id)
+            -- FOREIGN KEY (courseId) REFERENCES courses(id)
+        )`);
+
+        // Memberships (Annual Logic)
+        db.run(`CREATE TABLE IF NOT EXISTS memberships (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER,
+            status TEXT DEFAULT 'active', -- active, expired, cancelled
+            startDate DATETIME DEFAULT CURRENT_TIMESTAMP,
+            endDate DATETIME,
+            paymentId INTEGER,
+            createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+
+        // Password Resets
+        db.run(`CREATE TABLE IF NOT EXISTS password_resets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT,
+            code TEXT,
+            expiresAt DATETIME,
+            used BOOLEAN DEFAULT 0,
             createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
         )`);
 

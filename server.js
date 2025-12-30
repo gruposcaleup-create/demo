@@ -6,9 +6,23 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 const Stripe = require('stripe');
+const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
     maxNetworkRetries: 2,
     timeout: 10000,
+});
+
+// Mail Transporter
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: process.env.SMTP_PORT || 587,
+    secure: false, // true for 465, false for other ports
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    }
 });
 
 const app = express();
@@ -56,8 +70,19 @@ app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), (req,
                                 items.forEach(item => {
                                     // Handle 'membership-annual' or specific courses
                                     if (item.id === 'membership-annual') {
-                                        console.log(`[Enrollment] User ${userId} bought Annual Membership. TODO: Handle logic.`);
-                                        // Optional: Activate all courses or set a special flag
+                                        console.log(`[Enrollment] User ${userId} bought Annual Membership.`);
+                                        // Create/Update Membership
+                                        const startDate = new Date().toISOString();
+                                        const endDate = new Date();
+                                        endDate.setFullYear(endDate.getFullYear() + 1); // +1 Year
+
+                                        db.run(`INSERT INTO memberships (userId, status, startDate, endDate, paymentId) VALUES (?, ?, ?, ?, ?)`,
+                                            [userId, 'active', startDate, endDate.toISOString(), dbId],
+                                            (errMem) => {
+                                                if (errMem) console.error("Error creating membership", errMem);
+                                                else console.log("Membership created for user", userId);
+                                            }
+                                        );
                                     } else {
                                         // Enroll in specific course
                                         const courseId = item.id;
@@ -105,32 +130,57 @@ app.get('/api/db-check', (req, res) => {
 });
 
 // 1. Auth: Registro
-app.post('/api/auth/register', (req, res) => {
+app.post('/api/auth/register', async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
     if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' });
 
-    db.run(`INSERT INTO users (email, password, firstName, lastName) VALUES (?, ?, ?, ?)`,
-        [email, password, firstName || '', lastName || ''],
-        function (err) {
-            if (err) {
-                if (err.message.includes('UNIQUE')) return res.status(400).json({ error: 'El email ya está registrado' });
-                return res.status(500).json({ error: err.message });
+    try {
+        const hash = await bcrypt.hash(password, 10);
+        db.run(`INSERT INTO users (email, password, firstName, lastName) VALUES (?, ?, ?, ?)`,
+            [email, hash, firstName || '', lastName || ''],
+            function (err) {
+                if (err) {
+                    if (err.message.includes('UNIQUE')) return res.status(400).json({ error: 'El email ya está registrado' });
+                    return res.status(500).json({ error: err.message });
+                }
+                res.json({ id: this.lastID, email, firstName, lastName, role: 'user' });
             }
-            res.json({ id: this.lastID, email, firstName, lastName, role: 'user' });
-        }
-    );
+        );
+    } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
 // 2. Auth: Login
 app.post('/api/auth/login', (req, res) => {
     const { email, password } = req.body;
-    db.get(`SELECT * FROM users WHERE email = ? AND password = ?`, [email, password], (err, row) => {
+    db.get(`SELECT * FROM users WHERE email = ?`, [email], async (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(401).json({ error: 'Credenciales inválidas' });
 
-        // En prod: retornar JWT. Aquí retornamos el user object simple.
-        const { password, ...userWithoutPass } = row;
-        res.json(userWithoutPass);
+        if (row.status === 'blocked') return res.status(403).json({ error: 'Tu cuenta ha sido bloqueada. Contacta soporte.' });
+
+        try {
+            // Check password (support old plain text for admin seed if needed, but better migrate)
+            // If row.password doesn't start with $2b$, it might be legacy plain text (dev mode)
+            let match = false;
+            // Hack for pre-seeded plain text admin
+            if (!row.password.startsWith('$2b$') && row.password === password) {
+                match = true;
+            } else {
+                match = await bcrypt.compare(password, row.password);
+            }
+
+            if (!match) return res.status(401).json({ error: 'Credenciales inválidas' });
+
+            // En prod: retornar JWT. Aquí retornamos el user object simple.
+            const { password: _, ...userWithoutPass } = row;
+
+            // Check Membership Status
+            db.get(`SELECT * FROM memberships WHERE userId = ? AND status = 'active' AND endDate > CURRENT_TIMESTAMP ORDER BY endDate DESC LIMIT 1`, [row.id], (mErr, membership) => {
+                if (membership) userWithoutPass.membership = { active: true, endDate: membership.endDate };
+                res.json(userWithoutPass);
+            });
+
+        } catch (e) { res.status(500).json({ error: e.message }); }
     });
 });
 
@@ -138,46 +188,66 @@ app.post('/api/auth/login', (req, res) => {
 const recoveryCodes = new Map();
 
 // 3. Auth: Recuperar Pass (Simulado)
+// 3. Auth: Recuperar Pass
 app.post('/api/auth/recover', (req, res) => {
     const { email } = req.body;
 
     db.get('SELECT * FROM users WHERE email = ?', [email], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) {
-            // For security, don't reveal if user exists or not, but for this demo/debug we can be looser or just standard.
-            // We'll just say "If email exists..."
-            console.log(`[Recovery] Email not found: ${email}`);
             return res.json({ message: 'Si el correo existe, se enviaron instrucciones.' });
         }
 
         // Generate 6 digit code
         const code = Math.floor(100000 + Math.random() * 900000).toString();
-        recoveryCodes.set(email, { code, expires: Date.now() + 300000 }); // 5 mins
+        const expiresAt = new Date(Date.now() + 300000).toISOString(); // 5 mins
 
-        // LOG CODE TO CONSOLE (Simulation)
-        console.log('==============================================');
-        console.log(`[EMAIL SIMULATION] Recovery Code for ${email}: ${code}`);
-        console.log('==============================================');
+        db.run(`INSERT INTO password_resets (email, code, expiresAt) VALUES (?, ?, ?)`, [email, code, expiresAt], (err2) => {
+            if (err2) console.error("Error saving reset code", err2);
 
-        res.json({ message: 'Si el correo existe, se enviaron instrucciones.', code });
+            // Send Email
+            if (process.env.SMTP_USER) {
+                try {
+                    transporter.sendMail({
+                        from: '"Soporte" <' + process.env.SMTP_USER + '>',
+                        to: email,
+                        subject: 'Recuperación de Contraseña',
+                        text: `Tu código de recuperación es: ${code}`,
+                        html: `<b>Tu código de recuperación es: ${code}</b><br>Expira en 5 minutos.`
+                    }).catch(console.error);
+                } catch (e) { console.error("Mail error", e); }
+            } else {
+                console.log(`[MOCK EMAIL] To: ${email}, Code: ${code}`);
+            }
+
+            res.json({ message: 'Si el correo existe, se enviaron instrucciones.' });
+        });
     });
 });
 
-app.post('/api/auth/reset', (req, res) => {
+app.post('/api/auth/reset', async (req, res) => {
     const { email, code, newPassword } = req.body;
 
-    const record = recoveryCodes.get(email);
-    if (!record || record.code !== code || Date.now() > record.expires) {
-        return res.status(400).json({ error: 'Código inválido o expirado' });
-    }
+    // Check code in DB
+    db.get(`SELECT * FROM password_resets WHERE email = ? AND code = ? AND used = 0 AND expiresAt > CURRENT_TIMESTAMP ORDER BY createdAt DESC LIMIT 1`,
+        [email, code], async (err, row) => {
 
-    // Update password
-    db.run('UPDATE users SET password = ? WHERE email = ?', [newPassword, email], function (err) {
-        if (err) return res.status(500).json({ error: err.message });
+            if (err) return res.status(500).json({ error: err.message });
+            if (!row) return res.status(400).json({ error: 'Código inválido o expirado' });
 
-        recoveryCodes.delete(email); // Invalidate code
-        res.json({ message: 'Contraseña restablecida correctamente.' });
-    });
+            try {
+                const hash = await bcrypt.hash(newPassword, 10);
+
+                // Update password & Mark Used
+                db.serialize(() => {
+                    db.run('UPDATE users SET password = ? WHERE email = ?', [hash, email]);
+                    db.run('UPDATE password_resets SET used = 1 WHERE id = ?', [row.id]);
+                });
+
+                res.json({ message: 'Contraseña restablecida correctamente.' });
+
+            } catch (e) { res.status(500).json({ error: e.message }); }
+        });
 });
 
 // Update Password (Authenticated)
